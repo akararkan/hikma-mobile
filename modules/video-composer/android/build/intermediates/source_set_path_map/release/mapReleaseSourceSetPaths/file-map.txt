@@ -1,0 +1,11 @@
+expo.modules.videocomposer.video-composer-media3-exoplayer-1.4.1-0 /Users/khi/.gradle/caches/9.3.1/transforms/06402431dab5cc357f6135d374551f7b/transformed/media3-exoplayer-1.4.1/res
+expo.modules.videocomposer.video-composer-annotation-experimental-1.3.1-1 /Users/khi/.gradle/caches/9.3.1/transforms/0e6ad7ad2061aa1b15aeeaabfb016daa/transformed/annotation-experimental-1.3.1/res
+expo.modules.videocomposer.video-composer-core-1.8.0-2 /Users/khi/.gradle/caches/9.3.1/transforms/67fb71bae19a89fda7536d162f06257e/transformed/core-1.8.0/res
+expo.modules.videocomposer.video-composer-lifecycle-runtime-2.3.1-3 /Users/khi/.gradle/caches/9.3.1/transforms/e9536f4efd93744e92171799d8e0fb6e/transformed/lifecycle-runtime-2.3.1/res
+expo.modules.videocomposer.video-composer-pngs-4 /Users/khi/Desktop/ika-mobile-app/modules/video-composer/android/build/generated/res/pngs/release
+expo.modules.videocomposer.video-composer-resValues-5 /Users/khi/Desktop/ika-mobile-app/modules/video-composer/android/build/generated/res/resValues/release
+expo.modules.videocomposer.video-composer-mergeReleaseResources-6 /Users/khi/Desktop/ika-mobile-app/modules/video-composer/android/build/intermediates/incremental/release/mergeReleaseResources/merged.dir
+expo.modules.videocomposer.video-composer-mergeReleaseResources-7 /Users/khi/Desktop/ika-mobile-app/modules/video-composer/android/build/intermediates/incremental/release/mergeReleaseResources/stripped.dir
+expo.modules.videocomposer.video-composer-release-8 /Users/khi/Desktop/ika-mobile-app/modules/video-composer/android/build/intermediates/merged_res/release/mergeReleaseResources
+expo.modules.videocomposer.video-composer-main-9 /Users/khi/Desktop/ika-mobile-app/modules/video-composer/android/src/main/res
+expo.modules.videocomposer.video-composer-release-10 /Users/khi/Desktop/ika-mobile-app/modules/video-composer/android/src/release/res

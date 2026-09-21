@@ -1,0 +1,182 @@
+/* =========================================================
+   Users service — /api/v1/users  (full USER_API.md coverage)
+   Identity, public profiles + stats, social graph, suggestions,
+   close friends, links / contacts / specializations, avatar /
+   cover, email preferences.
+   ========================================================= */
+import { http } from './http.js'
+import { userFrom, followSuggestionFrom, userStatsFrom } from './adapters.js'
+import { specializationsTo } from './taxonomy.js'
+
+const page = (res, map) => ({
+  items: (res?.content || res || []).map(map),
+  total: res?.totalElements ?? null,
+  hasMore: res ? !res.last : false,
+})
+
+export const users = {
+  /* ---- identity (§9) ---- */
+  async get(id)            { return userFrom(await http.get(`/api/v1/users/${id}`)) },                                  // §9.2
+  async getByUsername(un)  { return userFrom(await http.get(`/api/v1/users/username/${un}`)) },                         // §9.3
+  async getByEmail(email)  { return userFrom(await http.get(`/api/v1/users/email/${encodeURIComponent(email)}`)) },    // §9.4
+  /* §9.6 / SEARCH: users.md — the DEDICATED people picker, on Postgres FTS
+     (GIN tsvector, ts_rank_cd, top-200 cap) with a pg_trgm fuzzy fallback and
+     a <3-char prefix path. Kept alongside global `types=USER` because this one
+     is transactionally fresh (zero indexing lag), can filter by role, and
+     hydrates a full Page<UserResponse>. Blank `q` lists all active users.
+     Returns the PAGE envelope — a picker that throws away `total`/`hasMore`
+     can't page, and this endpoint is the only people surface that can. */
+  async search(q, { page: p = 0, size = 20, eligibleContributor, signal } = {}) {
+    const res = await http.get('/api/v1/users/search', {
+      q: q || undefined, page: p, size,
+      eligibleContributor: eligibleContributor || undefined,   // → RESEARCHER | SCHOLAR only
+    }, { signal })                                             // live-typing pickers must cancel
+    return page(res, userFrom)
+  },
+  /** The historical array-only shape, for callers that never paged. */
+  async searchList(q, opts) { return (await this.search(q, opts)).items },
+  async updateIdentity(body){ return userFrom(await http.patch('/api/v1/users/me', body)) },                           // §9.5
+  deleteAccount()           { return http.del('/api/v1/users/me') },                                                    // §9.13 (soft)
+  /* §9.14 — the LIVE stat row: six counts computed across three datastores.
+     Prefer it over `profile.followerCount` & co, which the API documents as
+     denormalized, NOT maintained, and free to read 0.
+
+     It degrades instead of lying. All six counts ride ONE request, so a single
+     failure takes the whole row with it — and every call site then falls back
+     to those unmaintained counters, which is how a profile with two followers
+     came to render "0 Followers" with nothing on screen saying anything had
+     failed. (Root cause was server-side: the stat row is a Java record cached
+     through a serializer whose default typing skips final types, so the write
+     succeeded and every read inside the 30s TTL threw. Fixed in the backend —
+     this fallback is what keeps the number honest when it happens again.)
+
+     Followers/following are recoverable: their list endpoints are public and
+     their `totalElements` is the same number from the same table, so ask for
+     one row and read the total. Everything else comes back `null`, NOT 0 —
+     callers already spell `stats?.posts ?? list.length`, so a null falls
+     through to the count they can see, while a 0 would overwrite it. */
+  async stats(id) {
+    try {
+      return userStatsFrom(await http.get(`/api/v1/users/${id}/stats`))
+    } catch {
+      // `users.` and not `this.`: the fallback must still work if a caller ever
+      // destructures the method off the service.
+      const [f, g] = await Promise.allSettled([
+        users.followers(id, { page: 0, size: 1 }),
+        users.following(id, { page: 0, size: 1 }),
+      ])
+      const totalOf = (r) => (r.status === 'fulfilled' ? (r.value?.total ?? null) : null)
+      return {
+        posts: null, reels: null, research: null, questions: null,
+        followers: totalOf(f), following: totalOf(g),
+      }
+    }
+  },
+
+  /* ---- profile (§10) ---- */
+  async profile(id)         { return userFrom(await http.get(`/api/v1/users/${id}/profile`)) },                        // §10.1
+  /** §10.2 — the OWNER view of my own profile. Distinct from `profile(myId)`
+   *  in two ways the public read cannot give you: `profileViews` is populated
+   *  (it reads 0 for everyone else) and non-public links/contacts are
+   *  included. It is also uncached server-side, so it is the read to use
+   *  straight after a profile write when the 5-minute public cache would
+   *  still be serving the old row. */
+  async meProfile()         { return userFrom(await http.get('/api/v1/users/me/profile')) },
+  async updateProfile(body) { return userFrom(await http.patch('/api/v1/users/me/profile', body)) },                   // §10.3
+  uploadAvatar(file) { const fd = new FormData(); fd.append('image', file); return http.upload('/api/v1/users/me/profile/avatar', fd) },  // §10.4
+  removeAvatar()     { return http.del('/api/v1/users/me/profile/avatar') },                                            // §10.5
+  uploadCover(file)  { const fd = new FormData(); fd.append('image', file); return http.upload('/api/v1/users/me/profile/cover', fd) },   // §10.6
+  removeCover()      { return http.del('/api/v1/users/me/profile/cover') },                                             // §10.7
+  /* §10.8 / TAXONOMY §3.1 — REPLACE-ALL: the body is the complete new list and
+     anything missing from it is removed; `[]` clears. Position is the
+     displayOrder, so callers hand over an ordered list of topic ids (or topic
+     rows) and never hand-number anything. Transactional server-side: one
+     unknown topicId 404s the whole request and nothing is applied. */
+  async updateSpecializations(specializations) {
+    const body = { specializations: specializationsTo(specializations) }
+    return userFrom(await http.patch('/api/v1/users/me/profile/specializations', body))
+  },
+  /** Clear every specialization (the documented `[]` case), spelled out. */
+  async clearSpecializations() { return this.updateSpecializations([]) },
+
+  /* ---- profile links (§9.7-9.9) ---- */
+  addLink(body)            { return http.post('/api/v1/users/me/links', body) },               // { platform, description, url, isPublic, displayOrder }
+  editLink(linkId, body)   { return http.patch(`/api/v1/users/me/links/${linkId}`, body) },
+  removeLink(linkId)       { return http.del(`/api/v1/users/me/links/${linkId}`) },
+
+  /* ---- profile contacts (§9.10-9.12) ---- */
+  addContact(body)          { return http.post('/api/v1/users/me/contacts', body) },           // { platform, value, isPublic }
+  editContact(contactId, b) { return http.patch(`/api/v1/users/me/contacts/${contactId}`, b) },
+  removeContact(contactId)  { return http.del(`/api/v1/users/me/contacts/${contactId}`) },
+
+  /* ---- social graph (§11) ---- */
+  follow(id)        { return http.post(`/api/v1/users/${id}/follow`, {}) },                     // §11.1 → SocialActionResponse
+  unfollow(id)      { return http.del(`/api/v1/users/${id}/follow`) },                          // §11.2
+  block(id)         { return http.post(`/api/v1/users/${id}/block`, {}) },                      // §11.5
+  unblock(id)       { return http.del(`/api/v1/users/${id}/block`) },                           // §11.6
+  restrict(id)      { return http.post(`/api/v1/users/${id}/restrict`, {}) },                   // §11.8
+  unrestrict(id)    { return http.del(`/api/v1/users/${id}/restrict`) },                        // §11.9
+  socialStatus(id)  { return http.get(`/api/v1/users/${id}/social-status`) },                   // §11.11 → SocialStatusResponse
+  async followers(id, opts) { return page(await http.get(`/api/v1/users/${id}/followers`, opts), userFrom) },   // §11.3
+  async following(id, opts) { return page(await http.get(`/api/v1/users/${id}/following`, opts), userFrom) },   // §11.4
+  async blocked(opts)       { const r = await http.get('/api/v1/users/me/blocked', opts); return (r?.content || r || []).map(userFrom) },     // §11.7
+  async restricted(opts)    { const r = await http.get('/api/v1/users/me/restricted', opts); return (r?.content || r || []).map(userFrom) },  // §11.10
+
+  /* ---- people suggestions (§11.12-11.14) — hydrated, self-excluded, carry isFollowing ---- */
+  async suggestions({ limit = 20 } = {}) {                                                      // §11.12 (auto-falls back to who-to-follow)
+    const rows = await http.get('/api/v1/users/me/suggestions', { limit })
+    return (rows || []).map(followSuggestionFrom)
+  },
+  /* The who-to-follow surface's dismiss. It now persists a dismissal row like
+     the canonical `posts.dismissSuggestion` does (it used to be delete-only,
+     so dismissed people came straight back on the next recompute). Both are
+     permanent; use whichever surface the row came from. */
+  dismissSuggestion(candidateId) { return http.del(`/api/v1/users/me/suggestions/${candidateId}`) },             // §11.13
+  async whoToFollow({ limit = 20 } = {}) {                                                      // §11.14 (auth optional)
+    const rows = await http.get('/api/v1/users/who-to-follow', { limit })
+    return (rows || []).map(followSuggestionFrom)
+  },
+
+  /* ---- contact matching (friend-suggestion CONTACTS signal) --------------
+     The strongest cold-start signal there is, and the most sensitive: the
+     server must never receive an address book, so it receives only SHA-256
+     hashes (see lib/contactHash.js for the normalisation contract — get it
+     wrong and every hash silently matches nothing).
+
+     Three properties worth knowing at the call site:
+       · each sync REPLACES the previous upload — it is a snapshot, not a
+         delta, so a partial list quietly discards what came before;
+       · ≤5000 hashes per call (the helper caps and reports the overflow);
+       · sync and clear both trigger an async suggestion recompute, so the
+         caller re-reads suggestions after a beat rather than expecting them
+         in the response. */
+  /* DEPRECATED — use `api.settings.contactsSync` (/api/v1/contacts). These two
+     routes still work and now behave identically, but they used to bypass BOTH
+     the 3-per-24h rate limit and the consent record, which turned `matched`
+     into an unmetered membership oracle. Kept only so an old caller does not
+     break; do not wire anything new to them. */
+  contacts: {
+    /** @param hashes hex SHA-256 strings from lib/contactHash → { stored, matched } */
+    async sync(hashes) {
+      const res = await http.post('/api/v1/users/contacts/sync', { hashes: hashes || [] })
+      return { stored: res?.stored ?? 0, matched: res?.matched ?? 0 }
+    },
+    /** Privacy op: wipe every uploaded hash. The caller's own IDENTITY row
+     *  stays — it holds no contact data, only the hash of their own email,
+     *  which is what makes THEM findable by other people's syncs. */
+    clear() { return http.del('/api/v1/users/contacts') },   // 204
+  },
+
+  /* ---- email preferences (§16) ---- */
+  emailPrefs()              { return http.get('/api/v1/users/me/email-preferences') },          // §16.1
+  updateEmailPrefs(body)    { return http.patch('/api/v1/users/me/email-preferences', body) },  // §16.2
+  testEmail()               { return http.post('/api/v1/users/me/email-preferences/test', {}) },             // §16.3
+  unsubscribeAll()          { return http.post('/api/v1/users/me/email-preferences/unsubscribe-all', {}) },   // §16.4
+}
+
+/* Close friends — /api/v1/users/me/close-friends (§13, returns UserResponse rows). */
+export const closeFriends = {
+  async list(opts)   { const r = await http.get('/api/v1/users/me/close-friends', opts); return (r?.content || r || []).map(userFrom) },   // §13.1
+  add(userId)        { return http.post(`/api/v1/users/me/close-friends/${userId}`, {}) },      // §13.2
+  remove(userId)     { return http.del(`/api/v1/users/me/close-friends/${userId}`) },           // §13.3
+}

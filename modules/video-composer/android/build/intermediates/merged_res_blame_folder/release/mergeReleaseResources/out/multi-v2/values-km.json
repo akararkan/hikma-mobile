@@ -1,0 +1,68 @@
+{
+    "logs": [
+        {
+            "outputFile": "expo.modules.videocomposer.video-composer-release-7:/values-km/values-km.xml",
+            "map": [
+                {
+                    "source": "/Users/khi/.gradle/caches/9.3.1/transforms/06402431dab5cc357f6135d374551f7b/transformed/media3-exoplayer-1.4.1/res/values-km/values-km.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9,10",
+                        "startColumns": "4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,126,185,251,320,393,464,562,657",
+                        "endColumns": "70,58,65,68,72,70,97,94,68",
+                        "endOffsets": "121,180,246,315,388,459,557,652,721"
+                    }
+                },
+                {
+                    "source": "/Users/khi/.gradle/caches/9.3.1/transforms/67fb71bae19a89fda7536d162f06257e/transformed/core-1.8.0/res/values-km/values-km.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    },
+                    "to": {
+                        "startLines": "11",
+                        "startColumns": "4",
+                        "startOffsets": "726",
+                        "endColumns": "100",
+                        "endOffsets": "822"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "expo.modules.videocomposer.video-composer-mergeReleaseResources-5:/values-km/values-km.xml",
+            "map": [
+                {
+                    "source": "/Users/khi/.gradle/caches/9.3.1/transforms/06402431dab5cc357f6135d374551f7b/transformed/media3-exoplayer-1.4.1/res/values-km/values-km.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9,10",
+                        "startColumns": "4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,126,185,251,320,393,464,562,657",
+                        "endColumns": "70,58,65,68,72,70,97,94,68",
+                        "endOffsets": "121,180,246,315,388,459,557,652,721"
+                    }
+                },
+                {
+                    "source": "/Users/khi/.gradle/caches/9.3.1/transforms/67fb71bae19a89fda7536d162f06257e/transformed/core-1.8.0/res/values-km/values-km.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    },
+                    "to": {
+                        "startLines": "11",
+                        "startColumns": "4",
+                        "startOffsets": "726",
+                        "endColumns": "100",
+                        "endOffsets": "822"
+                    }
+                }
+            ]
+        }
+    ]
+}

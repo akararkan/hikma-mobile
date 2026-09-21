@@ -18,6 +18,14 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Push credentials. google-services.json only carries public project ids, but
+# it names YOUR Firebase project — and the service-account key beside it is a
+# private key that can send push as you. Neither belongs in a repo that might
+# ever go public. See PUSH.md.
+google-services.json
+GoogleService-Info.plist
+*service-account*.json
+
 # Metro
 .metro-health-check*
 

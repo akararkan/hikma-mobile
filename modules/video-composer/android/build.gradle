@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.videocomposer'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.videocomposer"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Media3 Transformer — trim (clipping), speed (SpeedChangeEffect) and
+  // sequence concat in one export. Keep the three artifacts on one version.
+  implementation 'androidx.media3:media3-transformer:1.4.1'
+  implementation 'androidx.media3:media3-effect:1.4.1'
+  implementation 'androidx.media3:media3-common:1.4.1'
+}

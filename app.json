@@ -1,23 +1,50 @@
 {
   "expo": {
-    "name": "ika-mobile-app",
-    "slug": "ika-mobile-app",
+    "name": "Hikmah Web",
+    "slug": "hikma-mobile",
+    "locales": {
+      "ar": "./locales/ar.json",
+      "ckb": "./locales/ckb.json"
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "ikamobileapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ika.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "audio",
+          "voip"
+        ],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSAllowsLocalNetworking": true,
+          "NSAllowsArbitraryLoadsForMedia": true
+        }
+      }
     },
     "android": {
+      "package": "com.ika.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#002147",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CONTACTS",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.USE_FULL_SCREEN_INTENT"
+      ],
+      "usesCleartextTraffic": true
     },
     "web": {
       "output": "static",
@@ -28,14 +55,108 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#002147",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 120,
+          "resizeMode": "contain"
         }
-      ]
+      ],
+      "expo-sharing",
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Hikmah Web needs access to your photos so you can post them, set an avatar and send them in chat.",
+          "cameraPermission": "Hikmah Web needs the camera so you can take photos and videos for posts, stories and reels."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Hikmah Web needs the camera for stories, reels, video calls and scanning QR codes.",
+          "microphonePermission": "Hikmah Web needs the microphone for voice messages, voice notes, calls and live streams.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Hikmah Web needs access to your library to save media you download.",
+          "savePhotosPermission": "Hikmah Web needs permission to save photos and videos to your library.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Hikmah Web can find people you already know. Contacts are hashed on your device before they are sent, and the originals never leave your phone."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Hikmah Web needs the microphone for voice messages, calls and live streams."
+        }
+      ],
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": false,
+          "supportsPictureInPicture": true
+        }
+      ],
+      "expo-task-manager",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#002147",
+          "defaultChannel": "default_v2",
+          "sounds": [
+            "./assets/sounds/notification.wav",
+            "./assets/sounds/message.wav",
+            "./assets/sounds/ringtone.wav",
+            "./assets/sounds/live.wav"
+          ]
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Hikmah Web uses your location only when you choose to attach it to a message. It is never collected in the background.",
+          "locationWhenInUsePermission": "Hikmah Web uses your location only when you choose to attach it to a message.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      "./plugins/withFullScreenCallIntent.js",
+      "./plugins/withNotifeeCoreOffline.js",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Hikmah Web needs the camera so other people can see you on a video call or your live stream.",
+          "microphonePermission": "Hikmah Web needs the microphone so other people can hear you on calls and live streams."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4"
+          },
+          "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ],
+      "expo-asset"
     ],
     "experiments": {
-      "typedRoutes": true,
       "reactCompiler": true
     }
   }
