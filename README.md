@@ -1,56 +1,81 @@
-# Welcome to your Expo app 👋
+# Hikmah Web — mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**تۆڕی حیکمە · شبكة الحكمة**
 
-## Get started
+The React Native client for the IRC platform: a social feed, a scholarly
+research library, a Q&A board, and a messenger with channels, calls and live
+streaming.
 
-1. Install dependencies
+Built on **Expo SDK 57** (React Native 0.86, React 19.2, expo-router v7),
+against the backend documented in [`irc-client-docs/`](irc-client-docs/README.md).
 
-   ```bash
-   npm install
-   ```
+## Running it
 
-2. Start the app
+A **development build** is required — Expo Go will not work. `react-native-mmkv`
+v4 is a Nitro module and needs native code compiled in, and the reason that is
+not optional is in [PORT.md](PORT.md#you-need-a-development-build-expo-go-will-not-run-this).
+`react-native-webrtc` is in the same category.
 
-   ```bash
-   npx expo start
-   ```
+```sh
+npm install
+cp .env.example .env          # then point EXPO_PUBLIC_API_BASE_URL at your backend
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+npx expo prebuild             # writes ios/ and android/ (both gitignored)
+npx expo run:ios              # or: npx expo run:android
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+After the first native build, `npx expo start` attaches to it. You only rebuild
+when a native dependency changes.
 
-### Other setup steps
+To work without a backend at all, set `EXPO_PUBLIC_USE_MOCK=true` — the whole app
+then runs off `src/mock/data.json`. A device-local override wins over the env
+var: `storage.setItem('ika_mock', 'on' | 'off')`.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Checks
 
-## Learn more
+```sh
+npm run typecheck                # tsc --noEmit
+node scripts/check-routes.mjs    # every navigation target resolves to a route
+npm run lint
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Layout
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+src/theme/       design tokens, the two semantic palettes, ThemeProvider
+src/ui/          the design system — screens import from '@/ui' and nothing else
+src/components/  domain components, grouped by surface
+src/app/         expo-router file tree
+src/api/         the API client (28 modules) — finished, do not add endpoints here
+src/lib/         helpers ported from the web app
+src/context/     Auth, Realtime (the three always-on SSE streams), Chat
+src/hooks/       useAsync · useAction · usePaged · useCooldown · useRealtime
+src/platform/    the six RN shims: env · storage · appEvents · toast · sse · files
+src/mock/        the fixture layer
+mobile-kit/      pristine copy of the web source. DIFF BASE ONLY — nothing imports it
+```
 
-## Join the community
+## Where to read next
 
-Join our community of developers creating universal apps.
+- **[PORT.md](PORT.md)** — the data layer: how the web app's 28 API modules,
+  its SSE handling and its helpers were moved to React Native, and what was
+  deliberately changed on the way.
+- **[BUILD.md](BUILD.md)** — the application layer: the design system, the
+  navigation shell, the realtime architecture, and the decisions that are not
+  visible from any single file.
+- **[irc-client-docs/README.md](irc-client-docs/README.md)** — the backend.
+  Every endpoint, error code and SSE event. It is the source of truth; where a
+  screen and the docs disagree, the docs win.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Conventions
+
+Three rules carry most of the weight:
+
+1. **Never invent an endpoint.** `src/api/` is complete. Import from the barrel
+   (`import { api } from '@/api'`) and grep the module before you call it.
+2. **Never hardcode copy the backend sends.** Errors render through
+   `errorText(e)`; branch on `codeOf(e)` and the predicates in
+   `src/api/errors.js`.
+3. **Never reach past `@/ui` for a colour, a font size or a press handler.**
+   If a token is missing, add it to `src/theme/`, not to a screen.
+# hikma-mobile
