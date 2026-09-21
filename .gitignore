@@ -64,3 +64,6 @@ example
 
 # native module gradle output
 modules/**/build/
+
+# stray embedded repo — local Xcode scaffold, kept on disk only
+ika/
