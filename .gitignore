@@ -39,6 +39,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
@@ -49,3 +50,17 @@ example
 # generated native folders
 /ios
 /android
+
+# Markdown docs — kept locally, not shipped to the repo
+*.md
+
+# editor / agent dirs
+.vscode/
+.idea/
+.claude/
+
+# archives
+*.zip
+
+# native module gradle output
+modules/**/build/
