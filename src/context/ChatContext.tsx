@@ -37,11 +37,6 @@ import {
   createKeyedStore, useChatEvents, useRealtimeApi, useRealtimeConnection,
   type ChatEvent, type KeyedStore,
 } from './RealtimeContext'
-import {
-  isTerminalCall, latestCallByConvo, latestCallForConvo, logFromCall,
-  logFromMissedNotification, mergeCallLog, type CallLogEntry,
-} from '@/components/call/callStore'
-import { callAtMs, callRowPreview, callWasMissed } from '@/components/call/callSummary'
 import { chatError } from '@/lib/chatErrors'
 import { chime } from '@/lib/chime'
 import { onIdle } from '@/lib/idle'
@@ -143,7 +138,6 @@ export interface ChatActions {
   sendTyping: (convId: string, isTyping: boolean, activity?: string) => void
 
   /** A stage invite that arrived while the user was elsewhere in the app. */
-  takeStageInvite: (streamId: string) => any
 
   /** conversationId → its inbox/archived row, mirrored from the lists. Read
    *  one row via useConversation(); the store itself rides the stable actions
@@ -250,14 +244,8 @@ export function useClearedFloor(convId?: string | null): string | null {
   return React.useSyncExternalStore(subscribe, read)
 }
 
-/** A conversation's last ACTIVITY: its newest message or its newest finished
- *  call, whichever came last. A call is not a message — the server writes no
- *  row for one — but it is the last thing that happened in the thread, and an
- *  inbox that ignored it would sink a call you took two minutes ago below a
- *  chat nobody has opened since Tuesday. */
 function activityAt(c: any): number {
-  const msg = c._lastAtMs ?? (c.lastMessageAt ? Date.parse(c.lastMessageAt) : 0)
-  return Math.max(msg || 0, c._callAtMs || 0)
+  return c._lastAtMs ?? (c.lastMessageAt ? Date.parse(c.lastMessageAt) : 0)
 }
 
 /** Inbox order: pinned first, then newest activity (id as tiebreak).
@@ -273,26 +261,11 @@ function byRecency(a: any, b: any) {
   return cmpId(b.lastMessageId, a.lastMessageId)
 }
 
-/** The three fields a finished call adds to an inbox row. Kept SEPARATE from
- *  `lastMessage*`: the call is not the last message, it only outranks it
- *  while no one has said anything since — which is a comparison the row makes
- *  for itself, and which reverses the moment the next message lands. */
-function callStamp(entry: CallLogEntry | null | undefined) {
-  if (!entry || !isTerminalCall(entry.status)) return null
-  const at = callAtMs(entry)
-  if (!at) return null
-  return { _callAtMs: at, lastCallPreview: callRowPreview(entry), lastCallMissed: callWasMissed(entry) }
-}
-
 /** Stamp `_lastAtMs` once where a server row enters, so byRecency stays
  *  parse-free on the hot path (one inbox sort used to cost hundreds of
- *  Date.parse calls per SSE frame). `calls` is the whole log folded into one
- *  map by the caller — a server row carries nothing about calls, so without
- *  re-stamping here every refetch would drop the call line from the rail. */
-function stampRecency(c: any, calls?: Map<string, CallLogEntry>) {
-  const row = { ...c, _lastAtMs: c.lastMessageAt ? Date.parse(c.lastMessageAt) : 0 }
-  const stamp = calls ? callStamp(calls.get(String(c.id))) : null
-  return stamp ? { ...row, ...stamp } : row
+ *  Date.parse calls per SSE frame). */
+function stampRecency(c: any) {
+  return { ...c, _lastAtMs: c.lastMessageAt ? Date.parse(c.lastMessageAt) : 0 }
 }
 
 /* The kind labels are the SERVER's exact strings (MessageService.previewOf:
@@ -375,7 +348,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const activeIdRef = React.useRef<string | null>(null)
   const seenRef = React.useRef(new Set<string>())
   const subscribersRef = React.useRef(new Set<(e: ChatEvent) => void>())
-  const stageInvitesRef = React.useRef(new Map<string, { member: any; at: number }>())
   const typingSentRef = React.useRef(new Map<string, { at: number; activity: string }>())
   const settingsRef = React.useRef(chatSettings)
   const segmentsRef = React.useRef<string[]>([])
@@ -422,7 +394,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const refreshInbox = React.useCallback(async () => {
     try {
       const res: any = await api.chat.conversations.list({ page: 0, size: PAGE_SIZE })
-      const calls = latestCallByConvo()
       /* List rows never carry the peer receipt markers (only the single GET
          does — ChatMapper's inbox mapper passes null) — so a wholesale replace
          here would roll every open thread's "Seen" tick back to "Sent" on each
@@ -437,9 +408,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               peerLastReadMessageId: maxId(old.peerLastReadMessageId, c.peerLastReadMessageId),
               peerLastDeliveredMessageId: maxId(old.peerLastDeliveredMessageId, c.peerLastDeliveredMessageId),
             }
-            : c, calls)
-        /* The server orders by last MESSAGE; a thread whose last activity was
-           a call has to be re-placed against that order here. */
+            : c)
         }).sort(byRecency)
       })
       inboxPageRef.current = 0
@@ -456,14 +425,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     try {
       const next = inboxPageRef.current + 1
       const res: any = await api.chat.conversations.list({ page: next, size: PAGE_SIZE })
-      const calls = latestCallByConvo()
       inboxPageRef.current = next
       setInboxHasMore(!!res.hasMore)
       setConversations(prev => {
         const have = new Set(prev.map(c => String(c.id)))
         return [
           ...prev,
-          ...res.items.filter((c: any) => !have.has(String(c.id))).map((c: any) => stampRecency(c, calls)),
+          ...res.items.filter((c: any) => !have.has(String(c.id))).map((c: any) => stampRecency(c)),
         ].sort(byRecency)
       })
     } catch (e) {
@@ -479,8 +447,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     archivedLoadingRef.current = true
     try {
       const res: any = await api.chat.conversations.archived({ page: 0, size: PAGE_SIZE })
-      const calls = latestCallByConvo()
-      setArchivedList(res.items.map((c: any) => stampRecency(c, calls)))
+      setArchivedList(res.items.map((c: any) => stampRecency(c)))
       archivedPageRef.current = 0
       setArchivedHasMore(!!res.hasMore)
     } catch (e) {
@@ -496,14 +463,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     try {
       const next = archivedPageRef.current + 1
       const res: any = await api.chat.conversations.archived({ page: next, size: PAGE_SIZE })
-      const calls = latestCallByConvo()
       archivedPageRef.current = next
       setArchivedHasMore(!!res.hasMore)
       setArchivedList(prev => {
         const have = new Set(prev.map(c => String(c.id)))
         return [
           ...prev,
-          ...res.items.filter((c: any) => !have.has(String(c.id))).map((c: any) => stampRecency(c, calls)),
+          ...res.items.filter((c: any) => !have.has(String(c.id))).map((c: any) => stampRecency(c)),
         ]
       })
     } catch (e) {
@@ -532,9 +498,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const upsertConvo = React.useCallback((convo: any) => {
     if (!convo) return
-    /* One row, so one lookup rather than folding the whole log into a map. */
-    const stamp = callStamp(latestCallForConvo(convo.id))
-    const row = { ...stampRecency(convo), ...(stamp || null) }
+    const row = stampRecency(convo)
     if (row.archived) {
       setArchivedList(prev => [row, ...prev.filter(c => c.id !== row.id)])
       setConversations(prev => prev.filter(c => c.id !== row.id))
@@ -564,47 +528,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [findConvo])
 
   const getConvo = React.useCallback((id: string) => findConvo(id), [findConvo])
-
-  /* ---------------- calls in the rail ----------------
-
-     A call leaves NO message behind (calls.md — there is not even a history
-     endpoint), so a conversation whose last event was a call used to fall
-     back to whatever was said before it: end a ten-minute call and the inbox
-     still quotes yesterday's "ok", at yesterday's time, in yesterday's place
-     in the list. The record is the device-local call log, and these two
-     write it onto the row the way a message writes itself onto one. */
-
-  const applyCall = React.useCallback((convId: string, entry: CallLogEntry | null) => {
-    const stamp = callStamp(entry)
-    /* `resort`: a finished call is new activity, so the row moves — the one
-       other patch that reorders the rail. */
-    if (stamp) patchConvo(convId, stamp, { resort: true })
-  }, [patchConvo])
-
-  /* Re-read the log for every loaded row. Used after rows arrive from the
-     server (which knows nothing about calls) and after missed calls are
-     folded in from their notifications. */
-  const restampCalls = React.useCallback(() => {
-    const calls = latestCallByConvo()
-    if (!calls.size) return
-    const apply = (list: any[]) => {
-      let touched = false
-      const next = list.map(c => {
-        const stamp = callStamp(calls.get(String(c.id)))
-        /* Identity is the memo the whole inbox rides on — only rows whose
-           call line actually moved may be replaced. */
-        if (!stamp || (c._callAtMs === stamp._callAtMs && c.lastCallPreview === stamp.lastCallPreview)) return c
-        touched = true
-        return { ...c, ...stamp }
-      })
-      return touched ? next : list
-    }
-    setConversations(prev => {
-      const next = apply(prev)
-      return next === prev ? prev : next.sort(byRecency)
-    })
-    setArchivedList(apply)
-  }, [])
 
   /* A receipt for a row we do not hold (deep link past inbox page one, or an
      archived thread before loadArchived ran) would otherwise be dropped — and
@@ -782,8 +705,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       api.chat.conversations.list({ page: 0, size: PAGE_SIZE }).then((inbox: any) => {
         if (!alive) return
-        const calls = latestCallByConvo()
-        setConversations(inbox.items.map((c: any) => stampRecency(c, calls)).sort(byRecency))
+        setConversations(inbox.items.map((c: any) => stampRecency(c)).sort(byRecency))
         inboxPageRef.current = 0
         setInboxHasMore(!!inbox.hasMore)
         setError(null)
@@ -796,35 +718,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     return () => { alive = false; cancelIdle() }
   }, [signedIn, clearedStore])
-
-  /* Calls missed while the app was NOT RUNNING never reached the device log —
-     nothing was listening for the `call.ended` frame — so the one call that
-     most deserves a line in the rail is the one that would have left none.
-     The server does keep it, as the CALL_MISSED bell (calls.md §Missed-call
-     bell), so one page of those is folded back into the log at boot and every
-     call surface reads it from there. Best-effort by design: a failure here
-     costs a preview line, never the inbox. */
-  React.useEffect(() => {
-    if (!signedIn) return
-    let alive = true
-    /* Best-effort backfill — it can also wait for an idle frame rather than
-       contending with Home's first paint. */
-    const cancelIdle = onIdle(() => {
-      if (!alive) return
-      api.notifications.list({ type: 'CALL_MISSED', page: 0, size: 30 } as any)
-        .then((res: any) => {
-          if (!alive) return
-          const rows = (res?.items || [])
-            .map(logFromMissedNotification)
-            .filter(Boolean) as CallLogEntry[]
-          if (!rows.length) return
-          mergeCallLog(rows)
-          restampCalls()
-        })
-        .catch(() => {})
-    })
-    return () => { alive = false; cancelIdle() }
-  }, [signedIn, restampCalls])
 
   /* Every (re)connect re-seeds the absolute badge and re-reads the inbox —
      the delta model drifts across a disconnect and this is the correction. */
@@ -917,22 +810,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         break
       }
 
-      /* A call just finished in one of my conversations — `call.ended` is the
-         one terminal frame (calls.md: a group decline leaves the call live).
-         It carries the whole call, so the rail is written straight from the
-         frame rather than from the log: CallBanner is the log's writer of
-         record and there is no ordering promise between two subscribers of
-         the same fan-out. The log is only the fallback for a bare frame, read
-         a beat later so its writer has run — the same beat the open thread
-         waits. Both paths go through the same describe grammar, so the rail
-         and the thread card say the same sentence either way. */
-      case 'call.ended': {
-        if (!convId) break
-        if (evt.call) applyCall(convId, logFromCall(evt.call, myIdRef.current))
-        else setTimeout(() => applyCall(convId, latestCallForConvo(convId)), 120)
-        break
-      }
-
       case 'conversation.updated': {
         if (evt.conversation) upsertConvo(evt.conversation)
         if (evt.memberChange === 'DELETED') removeConvo(convId)
@@ -998,23 +875,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         break
       }
 
-      /* A stage invite can land while the user is anywhere in the app. The
-         full Accept/Decline banner lives in the live room, so away from it say
-         what happened and where to go. The frame fires ONCE and the roster
-         never lists INVITED members, so it is also STASHED — the live screen
-         takes it on mount. Suppress the toast in the room itself. */
-      case 'stream.stage.invite': {
-        if (!evt.stageMember || !evt.streamId) break
-        stageInvitesRef.current.set(String(evt.streamId), { member: evt.stageMember, at: Date.now() })
-        const inThatRoom = segmentsRef.current.some(s => String(s) === String(evt.streamId))
-          || segmentsRef.current.join('/').includes(`live/${evt.streamId}`)
-        if (inThatRoom) break
-        const who = evt.stageMember.displayName
-          || (evt.stageMember.handle ? '@' + evt.stageMember.handle : 'The host')
-        toast.info(`${who} invited you up on their live stage — open their stream to accept`)
-        break
-      }
-
       default:
         break
     }
@@ -1022,7 +882,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     for (const h of [...subscribersRef.current]) {
       try { h(evt) } catch { /* isolate a bad subscriber */ }
     }
-  }, [applyMessageNew, findConvo, patchConvo, upsertConvo, removeConvo, pullConvoForReceipt, applyCall]))
+  }, [applyMessageNew, findConvo, patchConvo, upsertConvo, removeConvo, pullConvoForReceipt]))
 
   /* ---------------- actions ---------------- */
 
@@ -1263,13 +1123,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return () => { subscribersRef.current.delete(fn) }
   }, [])
 
-  const takeStageInvite = React.useCallback((streamId: string) => {
-    const key = String(streamId)
-    const v = stageInvitesRef.current.get(key)
-    if (v) stageInvitesRef.current.delete(key)
-    return v?.member ?? null
-  }, [])
-
   const inbox = React.useMemo<ChatInbox>(() => ({
     ready, connected, loading, error,
     conversations, archived, totalUnread,
@@ -1294,13 +1147,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setUnreadCount: setTotalUnread,
     setActiveConversation, subscribe,
     trackPresence, sendTyping,
-    takeStageInvite,
     convoStore, clearedStore,
   }), [
     setChatPrivacy, getConvo, refreshInbox, loadMoreInbox, loadArchived, loadMoreArchived,
     loadRequests, markRead, markUnread, togglePin, toggleMute, toggleArchive, deleteConvo, dropConvo,
     setDisappearing, acceptRequest, declineRequest, noteOutgoing, setActiveConversation, subscribe,
-    trackPresence, sendTyping, takeStageInvite, convoStore, clearedStore,
+    trackPresence, sendTyping, convoStore, clearedStore,
   ])
 
   return (

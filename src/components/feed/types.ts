@@ -151,32 +151,15 @@ export type FeedItem = PostView | ResearchFeedView | QuestionFeedView | ChannelP
 /** The synthetic rows the home list interleaves with real content. The
  *  discovery bands are the mobile shape of the web feed's right-hand rail:
  *  research, open questions and trending tags folded INTO the timeline. */
-export interface RailRow { kind: 'LIVE_RAIL'; id: string }
 export interface PymkRow { kind: 'PYMK'; id: string }
 /* One interface per kind — a single interface with a union `kind` would
    defeat discriminated-union narrowing at the renderItem dispatch. */
 export interface ResearchRailRow { kind: 'RESEARCH_RAIL'; id: string }
 export interface QnaBandRow { kind: 'QNA_BAND'; id: string }
 export interface TrendingRow { kind: 'TRENDING'; id: string }
-/** One live broadcast re-surfaced mid-timeline. CLIENT-synthesized — the
- *  ranked feed has no LIVE item kind (post/posts.md `postType`); the row
- *  renders whatever `liveNow[0]` is when it comes up. */
-export interface LiveCardRow { kind: 'LIVE_CARD'; id: string }
-export type BandRow = ResearchRailRow | QnaBandRow | TrendingRow | LiveCardRow
+export type BandRow = ResearchRailRow | QnaBandRow | TrendingRow
 export interface NoteRow { kind: 'EMPTY_NOTE'; id: string }
-export type FeedRow = FeedItem | RailRow | PymkRow | BandRow | NoteRow
-
-export interface LiveStreamView {
-  id: string
-  hostId: string | null
-  hostUsername: string | null
-  hostHandle: string
-  hostDisplayName: string | null
-  hostAvatarUrl: string | null
-  title: string
-  viewerCount: number
-  isLive: boolean
-}
+export type FeedRow = FeedItem | PymkRow | BandRow | NoteRow
 
 export interface SuggestionView {
   id: string

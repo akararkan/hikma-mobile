@@ -116,7 +116,6 @@ function linkOf(dto) {
     User: `/u/${id}`,
     Conversation: `/chat/${id}`,
     Channel: `/channels/${id}`,
-    LiveStream: `/live/${id}`,
   }[dto.resourceType] : null
   // TRENDING_DIGEST ships deepLink:null by design → the trending landing page.
   return derived || (dto.type === 'TRENDING_DIGEST' ? '/explore' : null)

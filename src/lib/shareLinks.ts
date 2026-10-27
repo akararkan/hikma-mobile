@@ -20,14 +20,13 @@
    prod) and app-scheme deep links have no host at all — so the
    id segment carries the burden of proof instead. Two-segment
    paths only, with the id validated per kind (UUID where the
-   backend mints UUIDs), which is what keeps a pasted
-   youtube.com/live/dQw4w9WgXcQ from dressing up as a stream.
+   backend mints UUIDs).
 
    Pure module: no React, no react-native — format.ts imports it.
    ========================================================= */
 
 export type ShareKind =
-  | 'post' | 'research' | 'question' | 'live'
+  | 'post' | 'research' | 'question'
   | 'channel' | 'invite' | 'profile' | 'story'
 
 export interface ShareRef {
@@ -95,9 +94,6 @@ export function parseShareUrl(url: string): ShareRef | null {
     case 'qna':
     case 'questions':
       return UUID.test(ref) ? make('question', 'id', `/qna/${ref}`) : null
-    case 'live':
-    case 'streams':
-      return UUID.test(ref) ? make('live', 'id', `/live/${ref}`) : null
     case 'c':
       return HANDLE.test(ref) ? make('channel', 'handle', `/c/${ref}`) : null
     case 'join':
@@ -147,7 +143,6 @@ export function shareSnippet(kind: ShareKind): string {
     post: 'Shared a post',
     research: 'Shared a paper',
     question: 'Shared a question',
-    live: 'Shared a live stream',
     channel: 'Shared a channel',
     invite: 'Shared an invitation',
     profile: 'Shared a profile',

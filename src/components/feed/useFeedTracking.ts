@@ -234,7 +234,7 @@ export function useFeedTracking(): FeedTracking {
         reportChannel(item.channel?.id, item.channelPostId)
         continue
       }
-      if (kind === 'LIVE_RAIL' || kind === 'PYMK') continue
+      if (kind === 'PYMK') continue
 
       const id = String(item.id || '')
       if (!id || seen.current.has(id)) continue

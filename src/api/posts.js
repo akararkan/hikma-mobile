@@ -5,7 +5,6 @@
    ========================================================= */
 import { http } from './http.js'
 import { feedItemFrom, postFromFeedItem, postFromResponse, commentFrom, suggestionFrom, rawSuggestionFrom } from './adapters.js'
-import { liveStreamFrom } from './chat.js'
 
 export const posts = {
   /* ---- Home feed ---------------------------------------------------------
@@ -16,7 +15,7 @@ export const posts = {
                                 tail-pins the chronologically-oldest timeline
                                 item so `cursor = items.at(-1).createdAt` still
                                 paginates correctly.
-       home()  GET /feed/home   canonical. items + liveNow + an explicit
+       home()  GET /feed/home   canonical. items + an explicit
                                 nextCursor — the ONLY correct cursor for a
                                 ranked page, because ranked order is not
                                 chronological order.
@@ -38,26 +37,17 @@ export const posts = {
   },
 
   /** The whole home screen in one request. Viewer-bound: anonymous → empty.
-   *  `liveNow` and the channel/explore injections are FIRST-PAGE ONLY, so a
+   *  The channel/explore injections are FIRST-PAGE ONLY, so a
    *  cursor page legitimately comes back with items and nothing else. */
   async home({ cursor, pageSize = 20, ranked, signal } = {}) {
     const res = await http.get('/api/v1/posts/feed/home', { cursor, pageSize, ranked }, { signal })   // usePaged cancels superseded pages
     return {
       items: (res?.items || []).map(feedItemFrom),
-      liveNow: (res?.liveNow || []).map(liveStreamFrom).filter(Boolean),
       // Authoritative — never re-derive it from item order (guide §5).
       // null = end of feed.
       nextCursor: res?.nextCursor || null,
       ranked: res?.ranked !== false,
     }
-  },
-
-  /** The live rail alone — for polling it more often than the feed body.
-   *  Followed hosts first, topped up to 10 with the most-watched public
-   *  streams, blocked hosts removed. Same `LiveStreamResponse` as /streams. */
-  async liveNow() {
-    const rows = await http.get('/api/v1/posts/feed/live-now')
-    return (rows || []).map(liveStreamFrom).filter(Boolean)
   },
 
   async byAuthor(authorId, { cursor, pageSize = 20, signal } = {}) {

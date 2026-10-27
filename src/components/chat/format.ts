@@ -85,13 +85,6 @@ export function rowTime(iso: string | null | undefined): string {
   return d ? rowLabel(d) : ''
 }
 
-/** The same label from an epoch stamp. A rail row showing a call already
- *  holds that instant as a number (the call log is parsed once, where it is
- *  stamped onto the conversation) — routing it back through an ISO string
- *  would re-parse it on every render of every visible row. */
-export function rowTimeAt(ms: number | null | undefined): string {
-  return ms ? rowLabel(new Date(ms)) : ''
-}
 
 function rowLabel(d: Date): string {
   const delta = today() - dayIndex(d)

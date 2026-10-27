@@ -94,11 +94,10 @@ export const NOTIFICATION_GROUPS = [
   { label: 'Messages & calls', rows: [
     ['NEW_MESSAGE', 'New messages'], ['MESSAGE_REQUEST', 'Message requests'],
     ['MESSAGE_MENTION', 'Mentions in chats'], ['ADDED_TO_GROUP', 'Added to a group'],
-    ['CALL_MISSED', 'Missed calls'],
   ]},
   { label: 'Channels & live', rows: [
     ['CHANNEL_NEW_POST', 'Channel posts'], ['CHANNEL_JOIN_REQUEST', 'Channel join requests'],
-    ['CHANNEL_JOIN_APPROVED', 'Channel join approved'], ['STREAM_STARTED', 'Live streams'],
+    ['CHANNEL_JOIN_APPROVED', 'Channel join approved'],
   ]},
   { label: 'System', rows: [
     ['SYSTEM_MESSAGE', 'System messages'], ['SYSTEM_ANNOUNCEMENT', 'Announcements'],

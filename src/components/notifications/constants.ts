@@ -76,13 +76,11 @@ export const NOTIF_ICONS: Record<string, Kind> = {
   BLOCKED: { icon: 'block', tone: 'danger' },
   UNBLOCKED: { icon: 'checkCircle', tone: 'success' },
   RESTRICTED: { icon: 'shield', tone: 'warning' },
-  STREAM_STARTED: { icon: 'live', tone: 'danger' },
 
   /* Chat & channels */
   NEW_MESSAGE: { icon: 'chat', tone: 'accent' },
   MESSAGE_REQUEST: { icon: 'mail', tone: 'accent' },
   ADDED_TO_GROUP: { icon: 'people', tone: 'accent' },
-  CALL_MISSED: { icon: 'callEnd', tone: 'danger' },
   CHANNEL_NEW_POST: { icon: 'channels', tone: 'accent' },
   CHANNEL_JOIN_REQUEST: { icon: 'personAdd', tone: 'accent' },
   CHANNEL_JOIN_APPROVED: { icon: 'checkCircle', tone: 'success' },
@@ -123,7 +121,7 @@ export function kindOf(type: string | null | undefined, moderation?: string | nu
    --------------------------------------------------------- */
 
 export const CHAT_TYPES = [
-  'NEW_MESSAGE', 'MESSAGE_REQUEST', 'ADDED_TO_GROUP', 'CALL_MISSED',
+  'NEW_MESSAGE', 'MESSAGE_REQUEST', 'ADDED_TO_GROUP',
   'CHANNEL_NEW_POST', 'CHANNEL_JOIN_REQUEST', 'CHANNEL_JOIN_APPROVED',
 ]
 
@@ -194,7 +192,7 @@ export const NOTIF_TYPE_SECTIONS: TypeSection[] = [
   { key: 'QNA', title: 'Q&A', types: ['QUESTION_NEW', 'QUESTION_ANSWERED', 'ANSWER_REPLIED', 'ANSWER_REACTED', 'ANSWER_ACCEPTED'] },
   { key: 'RESEARCH', title: 'Research', types: ['PUBLICATION_LIKED', 'PUBLICATION_COMMENTED', 'PUBLICATION_CITED'] },
   { key: 'MENTIONS', title: 'Mentions', types: ['USER_MENTIONED', 'MESSAGE_MENTION'] },
-  { key: 'SOCIAL', title: 'Social', types: ['NEW_FOLLOWER', 'UNBLOCKED', 'STREAM_STARTED'] },
+  { key: 'SOCIAL', title: 'Social', types: ['NEW_FOLLOWER', 'UNBLOCKED'] },
   { key: 'CHAT', title: 'Chat', types: CHAT_TYPES },
   { key: 'SYSTEM', title: 'System', types: ['SYSTEM_MESSAGE', 'SYSTEM_ANNOUNCEMENT', 'ACCOUNT_WARNING', 'TRENDING_DIGEST'] },
   {

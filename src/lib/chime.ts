@@ -40,26 +40,18 @@ export function setChimeMuted(muted: boolean) {
   } catch { /* ignore */ }
 }
 
-export type ChimeKind = 'message' | 'notification' | 'call' | 'error'
+export type ChimeKind = 'message' | 'notification' | 'error'
 
 /** Fire the in-app alert for an incoming event. No-op when muted, when the
  *  user turned haptics off, or when one already fired this window. */
 export function chime(kind: ChimeKind = 'notification'): boolean {
   if (isChimeMuted() || !prefersHaptics()) return false
   const now = Date.now()
-  /* A call is the one thing allowed to interrupt the rate limit — it is a
-     ringing phone, not a badge bump. */
-  if (kind !== 'call' && now - lastAt < MIN_GAP_MS) return false
+  if (now - lastAt < MIN_GAP_MS) return false
   lastAt = now
 
   try {
     switch (kind) {
-      case 'call':
-        /* Three beats, roughly a ring cadence. The ringing screen repeats it. */
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)
-        setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 260)
-        setTimeout(() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 520)
-        break
       case 'error':
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
         break

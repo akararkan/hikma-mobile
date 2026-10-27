@@ -34,24 +34,6 @@ export function assetUrl(u) {
   return API_BASE + (u.startsWith('/') ? u : '/' + u)
 }
 
-/* Streaming URLs (WHIP/WHEP/HLS/RTMP ingest) are ABSOLUTE and minted
-   server-side from `app.streaming.*`, whose defaults say `localhost` — which
-   on a phone is the phone itself, not the machine running MediaMTX. API_BASE
-   has already been corrected for this device (env.js rewrites it for the
-   emulator; a physical device carries the LAN IP in .env), so a localhost
-   media host is re-pointed at API_BASE's host. Scheme, port, path and query
-   are the deployment's own and pass through untouched — this rewrites a HOST,
-   it never invents an endpoint. */
-export function mediaUrl(u) {
-  if (!u) return u
-  /* The host may be a bracketed IPv6 literal ('http://[::1]:8080') — matched
-     whole, brackets included, because the colons inside would otherwise stop
-     the capture at '[' and the brackets ARE the correct replacement text. */
-  const apiHost = (/^[a-z][a-z0-9+.-]*:\/\/(\[[^\]]+\]|[^/:?#]+)/i.exec(API_BASE) || [])[1]
-  if (!apiHost) return u
-  return u.replace(/^([a-z][a-z0-9+.-]*:\/\/)(localhost|127\.0\.0\.1)(?=[:/?#]|$)/i, `$1${apiHost}`)
-}
-
 /* ---------- session ---------- */
 const TOKEN_KEY = 'ika_token'
 const USER_KEY = 'ika_user'

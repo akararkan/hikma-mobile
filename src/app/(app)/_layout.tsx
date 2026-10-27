@@ -175,14 +175,13 @@ function AppStack() {
 
           The names are the FULL route names, `/index` included. A directory
           without its own `_layout` does not collapse to the directory name,
-          so `name="live/[id]"` would match nothing and the presentation would
+          so `name="story/[id]"` would match nothing and the presentation would
           silently fall back to a push.
 
           These are also where `freezeOnBlur` is switched back OFF. A frozen
           screen stops its effects and its timers, and every surface below is
           one whose work has to outlive being covered — a sheet, a profile tap
-          out of a live chat, an incoming-call banner. Freezing a call is how
-          you drop a call, so the rule here is: when in doubt, exempt. */}
+          out of a busy chat. The rule here is: when in doubt, exempt. */}
       <Stack.Screen
         name="story/[authorId]"
         options={{
@@ -195,52 +194,6 @@ function AppStack() {
              the viewer comes back to a full bar on a frame that never turned.
              Nothing to win either — the viewer is almost always the top of the
              stack, not the thing five screens down. */
-          freezeOnBlur: false,
-        }}
-      />
-      {/* The watch screen OWNS the media and the roster: `stage` is a formSheet
-          that sits on top of it (control plane only, by design), which means
-          this screen is blurred and STILL VISIBLE behind it. Freezing a visible
-          broadcast is the worst of both. */}
-      <Stack.Screen
-        name="live/[id]/index"
-        options={{ presentation: 'fullScreenModal', animation: 'fade', freezeOnBlur: false }}
-      />
-      {/* The vertical live pager — one full room mounted at a time; the same
-          never-freeze rule (its mounted room owns transports and joins). */}
-      <Stack.Screen
-        name="live/watch"
-        options={{ presentation: 'fullScreenModal', animation: 'fade', freezeOnBlur: false }}
-      />
-      {/* Publishing. The console is the only screen that can stop the stream. */}
-      <Stack.Screen
-        name="live/[id]/host"
-        options={{ presentation: 'fullScreenModal', animation: 'fade', freezeOnBlur: false }}
-      />
-      {/* The stage sheet builds its "Watching" tab from `stream.viewer` frames
-          collected live — a freeze drops frames and the list quietly goes wrong.
-          Options are otherwise set inline in the screen itself. */}
-      <Stack.Screen name="live/[id]/stage" options={{ freezeOnBlur: false }} />
-      <Stack.Screen
-        name="call/[id]/index"
-        options={{
-          presentation: 'fullScreenModal',
-          animation: 'fade',
-          gestureEnabled: false,
-          /* callEngine's glare/ICE handling, the duration clock and every
-             renegotiation land through this screen's effects. Freeze it and a
-             call that is covered by so much as a report modal stops answering. */
-          freezeOnBlur: false,
-        }}
-      />
-      <Stack.Screen
-        name="call/[id]/incoming"
-        options={{
-          presentation: 'fullScreenModal',
-          animation: 'fade',
-          gestureEnabled: false,
-          /* The ringer and the give-up timeout are effects. A frozen ring is a
-             missed call. */
           freezeOnBlur: false,
         }}
       />

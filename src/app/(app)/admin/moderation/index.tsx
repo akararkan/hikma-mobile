@@ -15,7 +15,7 @@
       the server did not run.
    3. `preview` is built from an unordered field fetch. It is a
       hint about the case, never "the body", and for
-      CHAT_MESSAGE / LIVE_CHAT it is the redaction placeholder:
+      CHAT_MESSAGE it is the redaction placeholder:
       chat bodies are never shown to staff, in any admin view,
       ever.
 

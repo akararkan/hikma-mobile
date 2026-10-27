@@ -60,7 +60,7 @@
 import React from 'react'
 import { AppState, type AppStateStatus } from 'react-native'
 import { api } from '@/api'
-import { notifyGeneric, notifyLive } from '@/lib/pushNotify'
+import { notifyGeneric } from '@/lib/pushNotify'
 import { showInAppBanner } from '@/components/system/InAppBanner'
 import { useAuth } from './AuthContext'
 
@@ -704,11 +704,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
            coalesced — and a coalesced re-delivery is a refresh of something
            already announced, so absent title = no banner, by design. */
         if (AppState.currentState !== 'active' && n?.title) {
-          /* STREAM_STARTED ("X is live") gets its own channel/sound — every
-             other kind (system, channel, research, QNA, social…) rides the
-             general default channel. */
-          const notify = n.type === 'STREAM_STARTED' ? notifyLive : notifyGeneric
-          notify({
+          notifyGeneric({
             title: String(n.title),
             body: n.body ? String(n.body) : undefined,
             href: '/notifications',

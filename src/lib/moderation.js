@@ -309,8 +309,6 @@ export const ENTITY_LABEL = {
   QNA_ANSWER: 'answer',
   CHAT_MESSAGE: 'message',
   CHANNEL: 'channel details',
-  STREAM_META: 'stream details',
-  LIVE_CHAT: 'live chat message',
   CONTENT_ANNOTATION: 'content',
 }
 
@@ -333,8 +331,6 @@ export const HOLD_CEILING_MS = {
   QNA_ANSWER: 30000,
   CHAT_MESSAGE: 10000,
   CHANNEL: 30000,
-  STREAM_META: 30000,
-  LIVE_CHAT: 5000,
   CONTENT_ANNOTATION: 10000,
 }
 

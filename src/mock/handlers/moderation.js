@@ -43,7 +43,7 @@
        name, while every settings / metrics / threshold key is the lowercase
        `key()` (`post_comment`, `chat_message`, …). One endpoint answers both
        spellings for the same enum; that is not a typo.
-     · the redaction — CHAT_MESSAGE and LIVE_CHAT never hand their body to
+     · the redaction — CHAT_MESSAGE never hands its body to
        staff, on either the list preview or the field view.
 
    Enum spellings, labels and hold ceilings are IMPORTED from
@@ -201,10 +201,10 @@ const typeOfKey = (k) => ENTITY_TYPES.find(t => key(t) === String(k || '').toLow
 /* AdminAutoModerationController.REDACTED — byte for byte, em dash included.
    Staff never see a private message body, so the fixture must not either. */
 const REDACTED = '[private message — body withheld from staff by policy]'
-const PRIVATE_TEXT = new Set(['CHAT_MESSAGE', 'LIVE_CHAT'])
+const PRIVATE_TEXT = new Set(['CHAT_MESSAGE'])
 
 /* Ephemeral content is dropped rather than held past its own lifetime. */
-const EPHEMERAL = new Set(['STORY', 'STORY_POLL', 'LIVE_CHAT'])
+const EPHEMERAL = new Set(['STORY', 'STORY_POLL'])
 
 const round3 = (n) => Math.round(Number(n) * 1000) / 1000
 
@@ -359,18 +359,6 @@ const SEED_CASES = [
     }],
   },
   {
-    /* Private text again, and the severest score in the queue: this is the row
-       that proves the console can rank on scores it cannot read the source of. */
-    caseId: 'a1c07f7e-9d2b-4f31-9b41-0c1d5e2a7008',
-    entityType: 'LIVE_CHAT', entityRef: 'lc-2201', parentRef: 's-usul-live', authorId: 'u-halil',
-    status: 'IN_REVIEW', reasonCode: 'MODEL', modelVersion: 'v2',
-    submittedMinsAgo: 55, slaBreached: true, authorPriorRejections: 4,
-    fields: [{
-      fieldName: 'text', topLabel: 'severe_toxic', topScore: 0.91,
-      text: 'Get off this stream before someone makes you.',
-    }],
-  },
-  {
     /* Already approved by a human — the row keeps `decidedAt` and flips its
        reasonCode to ADMIN. Present so the console's "decided" filter is not
        an empty screen on first load. */
@@ -394,16 +382,6 @@ const SEED_CASES = [
       fieldName: 'textContent', topLabel: 'insult', topScore: 0.88,
       text: 'You are a fraud and everyone in this field knows it.',
     }],
-  },
-  {
-    caseId: 'a1c07f7e-9d2b-4f31-9b41-0c1d5e2a700b',
-    entityType: 'STREAM_META', entityRef: 's-manuscript-lab', authorId: 'u-amina',
-    status: 'IN_REVIEW', reasonCode: 'MODEL', modelVersion: 'v2',
-    submittedMinsAgo: 12, slaBreached: false, authorPriorRejections: 0,
-    fields: [
-      { fieldName: 'title', topLabel: 'toxic', topScore: 0.39, text: 'Manuscript lab — bring your worst transcription' },
-      { fieldName: 'description', topLabel: 'toxic', topScore: 0.21, text: 'Open session, no booking, cameras optional.' },
-    ],
   },
   {
     /* A multi-field case with a repeated field: the index suffix on

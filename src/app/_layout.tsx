@@ -43,7 +43,6 @@ import { RealtimeProvider } from '@/context/RealtimeContext'
 import { ToastHost, setFontsReady } from '@/ui'
 import { hideNativeSplash } from '@/lib/splash'
 import { StepUpHost } from '@/components/system/StepUpHost'
-import { CallBanner } from '@/components/system/CallBanner'
 import { InAppBannerHost } from '@/components/system/InAppBanner'
 import { OfflineBanner } from '@/components/system/OfflineBanner'
 
@@ -148,9 +147,7 @@ function Shell({ fontsSettled }: { fontsSettled: boolean }) {
         <Stack.Screen name="+not-found" options={{ presentation: 'modal' }} />
       </Stack>
 
-      {/* Chrome that outranks the navigator: an incoming call must be
-          reachable from any screen, and a toast must sit over a modal. */}
-      <CallBanner />
+      {/* Chrome that outranks the navigator: a toast must sit over a modal. */}
       <InAppBannerHost />
       <OfflineBanner />
       <StepUpHost />

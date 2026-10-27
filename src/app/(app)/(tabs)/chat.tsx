@@ -279,9 +279,8 @@ export default function ChatsScreen() {
         <Text variant="callout" tone="muted" align="ui">Search messages</Text>
       </Touchable>
 
-      {/* Five chips outgrow a narrow phone — the rail scrolls rather than
-          clipping Calls and Channels off the end. The badge rides in the
-          scroll content, so it travels with its chip. */}
+      {/* The rail scrolls rather than clipping chips off the end. The badge
+          rides in the scroll content, so it travels with its chip. */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRail}>
         <Chip
           label="Requests"
@@ -296,8 +295,6 @@ export default function ChatsScreen() {
         ) : null}
         <Chip label="Archived" icon="archive" onPress={() => router.push('/chat/archived')} />
         <Chip label="Starred" icon="star" onPress={() => router.push('/chat/starred')} />
-        {/* Calls are conversations too — a missed one is only findable here. */}
-        <Chip label="Calls" icon="call" onPress={() => router.push('/calls')} />
         <Chip label="Channels" icon="channels" onPress={() => router.push('/channels')} />
       </ScrollView>
     </View>

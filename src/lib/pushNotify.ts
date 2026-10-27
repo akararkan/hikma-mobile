@@ -73,8 +73,6 @@ Notifications.setNotificationHandler({
    back to the plugin's silent default channel. */
 export const CHANNEL_DEFAULT = 'default_v2'
 export const CHANNEL_MESSAGES = 'messages_v2'
-export const CHANNEL_CALLS = 'calls_v1'
-export const CHANNEL_LIVE = 'live_v1'
 
 let channelsReady: Promise<void> | null = null
 
@@ -98,24 +96,6 @@ export function ensureNotificationChannels(): Promise<void> {
       sound: 'message.wav',
       vibrationPattern: [0, 160],
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
-    })
-    await Notifications.setNotificationChannelAsync(CHANNEL_LIVE, {
-      name: 'Live',
-      importance: Notifications.AndroidImportance.HIGH,
-      sound: 'live.wav',
-      vibrationPattern: [0, 160],
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
-    })
-    await Notifications.setNotificationChannelAsync(CHANNEL_CALLS, {
-      name: 'Calls',
-      /* MAX + the long ringtone: for a backgrounded app this channel IS the
-         ring — the sound file carries ~24s of repeating ring, which is the
-         Android way to "loop" (a channel plays its sound once per post). */
-      importance: Notifications.AndroidImportance.MAX,
-      sound: 'ringtone.wav',
-      vibrationPattern: [0, 400, 250, 400, 250, 400],
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      bypassDnd: true,
     })
     /* The pre-sound generation. Deleting a channel that never existed is a
        no-op, so this is safe on fresh installs. */
@@ -168,38 +148,6 @@ export function notifyGeneric(opts: { title: string; body?: string; href?: strin
     sound: 'notification.wav',
     data: opts.href ? { href: opts.href } : undefined,
   }, CHANNEL_DEFAULT, opts.id ? `ntf-${opts.id}` : undefined)
-}
-
-/** A followed user going live (STREAM_STARTED). Its own channel/sound so a
- *  "went live" alert reads distinctly from an ordinary inbox notification. */
-export function notifyLive(opts: { title: string; body?: string; href?: string | null; id?: string }) {
-  void present({
-    title: opts.title,
-    body: opts.body || undefined,
-    sound: 'live.wav',
-    data: opts.href ? { href: opts.href } : undefined,
-  }, CHANNEL_LIVE, opts.id ? `live-${opts.id}` : undefined)
-}
-
-/** An incoming call. The calls channel rings for ~24s on its own; dismiss via
- *  dismissCallNotification when the call is answered/declined/ended so the
- *  ring does not outlive the call.
- *  `avatarUrl` is accepted for signature parity with the Android path
- *  (callNotifee.presentIncomingCall) and unused here: expo-notifications can
- *  only attach LOCAL files on iOS, and downloading mid-ring is the wrong
- *  trade. CallKit is the real iOS answer — see PUSH.md. */
-export function notifyIncomingCall(opts: { callId: string; title: string; body: string; avatarUrl?: string | null }) {
-  void present({
-    title: opts.title,
-    body: opts.body,
-    sound: 'ringtone.wav',
-    priority: Notifications.AndroidNotificationPriority.MAX,
-    data: { href: `/call/${opts.callId}/incoming`, callId: opts.callId },
-  }, CHANNEL_CALLS, `call-${opts.callId}`)
-}
-
-export function dismissCallNotification(callId: string) {
-  void Notifications.dismissNotificationAsync(`call-${callId}`).catch(() => {})
 }
 
 /** `unregistered` is the honest middle state: the OS said yes, but the token

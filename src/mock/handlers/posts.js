@@ -640,8 +640,6 @@ export const routes = [
       const next = pool.length > n && items.length ? items[items.length - 1].createdAt : null
       return {
         items,
-        // First page only, and the live domain owns the rail's contents.
-        liveNow: ctx.query.cursor ? [] : (Array.isArray(db.liveStreams) ? db.liveStreams : []),
         nextCursor: next,
         ranked,
       }
@@ -661,13 +659,6 @@ export const routes = [
       out.push(out.splice(oldest, 1)[0])
       return out
     },
-  },
-  {
-    /* The rail alone, for clients that refresh it more often than the body.
-       The live domain owns the rows; an empty rail is an ordinary state
-       (nobody you follow is broadcasting), not a failure. */
-    m: 'GET', p: /^\/api\/v1\/posts\/feed\/live-now$/,
-    fn: (db) => (Array.isArray(db.liveStreams) ? db.liveStreams : []),
   },
 
   /* ---- People you may know -----------------------------------------------

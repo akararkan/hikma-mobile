@@ -83,7 +83,6 @@ const KIND_META: Record<ShareRef['kind'], { label: string; icon: IconName; noun:
   post: { label: 'Post', icon: 'image', noun: 'post' },
   research: { label: 'Paper', icon: 'research', noun: 'paper' },
   question: { label: 'Question', icon: 'qna', noun: 'question' },
-  live: { label: 'Live', icon: 'live', noun: 'stream' },
   channel: { label: 'Channel', icon: 'channels', noun: 'channel' },
   invite: { label: 'Invitation', icon: 'people', noun: 'invitation' },
   profile: { label: 'Profile', icon: 'person', noun: 'profile' },
@@ -138,19 +137,6 @@ async function fetchPreview(share: ShareRef): Promise<Preview> {
         ...base,
         title: oneLine(q?.title) || 'Question',
         sub: q?._author?.full ? `Asked by ${q._author.full}` : '',
-      }
-    }
-    case 'live': {
-      const s: any = await api.chat.streams.get(share.ref)
-      return {
-        ...base,
-        title: oneLine(s?.title) || 'Live',
-        sub: s?.isLive
-          ? (s?.hostHandle ? `@${s.hostHandle} is live` : 'Live now')
-          : 'This stream has ended',
-        thumb: s?.hostAvatarUrl || null,
-        round: true,
-        live: !!s?.isLive,
       }
     }
     case 'channel': {

@@ -18,11 +18,6 @@
       when the viewer hid their own last-seen. That switch is
       symmetric, so promising a signal we cannot receive would
       be a lie the layout tells.
-   4. A finished call OUTRANKS the last message while nobody has
-      said anything since. The server writes no message for a
-      call, so the stamp comes from the device call log through
-      ChatContext; the comparison is made here, per row, and
-      reverses the instant the next message lands.
    ========================================================= */
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -31,7 +26,7 @@ import { shareSnippet, splitShareBody } from '@/lib/shareLinks'
 import { useTheme } from '@/theme/ThemeProvider'
 import { layout, radius, space } from '@/theme/tokens'
 import { Avatar, Icon, NumericText, Text, TouchableRow, VerifiedMark } from '@/ui'
-import { rowTime, rowTimeAt, typingSentence, type Typer } from './format'
+import { rowTime, typingSentence, type Typer } from './format'
 import type { UserCard } from './userDirectory'
 
 /* Component geometry — the shapes this row draws, named here rather than
@@ -97,17 +92,8 @@ function ConversationRowInner({
 
   const typingLine = typingSentence(typers, id => nameOf?.(id) || '', !!convo.isGroup)
 
-  /* The last thing that happened here was a CALL. `_callAtMs` and
-     `lastCallPreview` are stamped by ChatContext from the device call log;
-     ties go to the call, since a call that ends in the same millisecond as a
-     message arrives is the later event by every practical measure. */
-  const callAtMs = Number(convo._callAtMs) || 0
-  const msgAtMs = Number(convo._lastAtMs) || (convo.lastMessageAt ? Date.parse(convo.lastMessageAt) : 0)
-  const showCall = !!convo.lastCallPreview && callAtMs > 0 && callAtMs >= msgAtMs
-
   const preview = (() => {
     if (typingLine) return typingLine
-    if (showCall) return convo.lastCallPreview
     /* `lastMessagePreview` is already safe for disappearing messages: the
        server writes "🕓 Disappearing message" (or the media-kind label) into
        it at send time, and ChatContext's previewOf applies the same rule to
@@ -183,9 +169,7 @@ function ConversationRowInner({
 
         <Text
           variant="footnote"
-          /* A missed call is the one preview that is also a problem — it reads
-             in danger ink, the same word the /calls row uses for it. */
-          tone={typingLine ? 'accent' : (showCall && convo.lastCallMissed) ? 'danger' : 'muted'}
+          tone={typingLine ? 'accent' : 'muted'}
           italic={!!typingLine}
           numberOfLines={1}
           style={styles.previewGap}
@@ -196,7 +180,7 @@ function ConversationRowInner({
 
       <View style={styles.right}>
         <Text variant="caption" tone={hasUnread && !muted ? 'accent' : 'faint'} align="ui">
-          {showCall ? rowTimeAt(callAtMs) : rowTime(convo.lastMessageAt)}
+          {rowTime(convo.lastMessageAt)}
         </Text>
         {unread > 0 ? (
           <View style={[styles.pill, { backgroundColor: muted ? c.textFaint : c.accent }]}>

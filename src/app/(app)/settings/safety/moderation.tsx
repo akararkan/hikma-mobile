@@ -59,8 +59,6 @@ const TIMING_ROWS: { key: string; label?: string }[] = [
   { key: 'QNA_QUESTION', label: 'Question or answer' },
   { key: 'CHAT_MESSAGE' },
   { key: 'CHANNEL' },
-  { key: 'STREAM_META' },
-  { key: 'LIVE_CHAT' },
 ]
 
 const OUTCOMES = [
@@ -100,10 +98,6 @@ const SPECIAL_CASES = [
     title: 'Channel and group names',
     body: 'A refused or held rename simply doesn’t apply: the previous approved name keeps serving. '
       + 'Members never see a “checking” state, on purpose.',
-  },
-  {
-    title: 'Live stream chat',
-    body: 'There is no held state at all. A risky line is silently not shown — no error, no notification, nothing to wait for.',
   },
 ]
 
@@ -187,8 +181,8 @@ export default function ModerationExplainerScreen() {
                 {i > 0 ? <Divider inset={14} /> : null}
                 <View style={[styles.tableRow, on ? { backgroundColor: c.accentSofter } : null]}>
                   <Text variant="callout" align="ui" style={styles.flex} numberOfLines={1}>{label}</Text>
-                  <Text variant="callout" tone={row.key === 'LIVE_CHAT' ? 'muted' : 'secondary'} align="ui">
-                    {row.key === 'LIVE_CHAT' ? 'never held' : fmtMs(ceiling)}
+                  <Text variant="callout" tone="secondary" align="ui">
+                    {fmtMs(ceiling)}
                   </Text>
                 </View>
               </View>

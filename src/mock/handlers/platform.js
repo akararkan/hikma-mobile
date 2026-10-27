@@ -44,7 +44,6 @@ const COLLECTIONS = {
   User: ['users', 'people'],
   Conversation: ['conversations', 'chats'],
   Channel: ['channels'],
-  LiveStream: ['streams', 'live', 'lives'],
   Story: ['stories'],
   Sound: ['sounds'],
 }
@@ -116,11 +115,10 @@ const CATEGORY_OF = {
   QUESTION_NEW: 'QNA', QUESTION_ANSWERED: 'QNA', ANSWER_REPLIED: 'QNA',
   ANSWER_REACTED: 'QNA', ANSWER_ACCEPTED: 'QNA',
   PUBLICATION_LIKED: 'RESEARCH', PUBLICATION_COMMENTED: 'RESEARCH', PUBLICATION_CITED: 'RESEARCH',
-  NEW_MESSAGE: 'CHAT', MESSAGE_REQUEST: 'CHAT', ADDED_TO_GROUP: 'CHAT', CALL_MISSED: 'CHAT',
+  NEW_MESSAGE: 'CHAT', MESSAGE_REQUEST: 'CHAT', ADDED_TO_GROUP: 'CHAT',
   CHANNEL_NEW_POST: 'CHAT', CHANNEL_JOIN_REQUEST: 'CHAT', CHANNEL_JOIN_APPROVED: 'CHAT',
   NEW_FOLLOWER: 'SOCIAL', UNFOLLOWED: 'SOCIAL', BLOCKED: 'SOCIAL', UNBLOCKED: 'SOCIAL',
   RESTRICTED: 'SOCIAL', CONNECTION_REQUEST: 'SOCIAL', CONNECTION_ACCEPTED: 'SOCIAL',
-  STREAM_STARTED: 'SOCIAL',
   SYSTEM_MESSAGE: 'SYSTEM', SYSTEM_ANNOUNCEMENT: 'SYSTEM',
   ACCOUNT_WARNING: 'SYSTEM', TRENDING_DIGEST: 'SYSTEM',
 }
@@ -137,7 +135,6 @@ const DEEP_LINK = {
   User: (id) => `/users/${id}`,
   Conversation: (id) => `/chat/${id}`,
   Channel: (id) => `/channels/${id}`,
-  LiveStream: (id) => `/live/${id}`,
   Comment: (id) => `/comments/${id}`,
 }
 

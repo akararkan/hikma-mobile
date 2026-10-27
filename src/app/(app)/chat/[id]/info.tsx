@@ -168,14 +168,6 @@ export default function ConversationInfoScreen() {
               label="Message"
               onPress={() => router.replace(`/chat/${convId}`)}
             />
-            {/* No calls in channels: a broadcast surface with thousands of
-                subscribers is not a room you can ring. DMs and groups only. */}
-            {!convo.isChannel ? (
-              <>
-                <QuickAction icon="call" label="Call" onPress={() => router.push(`/call/new?convId=${convId}&type=VOICE`)} />
-                <QuickAction icon="videoCall" label="Video" onPress={() => router.push(`/call/new?convId=${convId}&type=VIDEO`)} />
-              </>
-            ) : null}
             <QuickAction
               icon={convo.muted ? 'mutedBell' : 'bell'}
               label={convo.muted ? 'Unmute' : 'Mute'}

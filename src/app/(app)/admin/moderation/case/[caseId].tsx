@@ -20,8 +20,8 @@
      so the block is replaced by a sentence.
    · `decidedAt` is ABSENT when undecided (NON_NULL is global),
      never present-and-null.
-   · `teachModel` is a silent no-op for CHAT_MESSAGE /
-     LIVE_CHAT — the switch is force-disabled rather than
+   · `teachModel` is a silent no-op for CHAT_MESSAGE —
+     the switch is force-disabled rather than
      promising a training write that never happens.
 
    Neither decision needs step-up. That is deliberate in the

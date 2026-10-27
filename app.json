@@ -74,8 +74,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Hikmah Web needs the camera for stories, reels, video calls and scanning QR codes.",
-          "microphonePermission": "Hikmah Web needs the microphone for voice messages, voice notes, calls and live streams.",
+          "cameraPermission": "Hikmah Web needs the camera for stories, reels and scanning QR codes.",
+          "microphonePermission": "Hikmah Web needs the microphone for voice messages and voice notes.",
           "recordAudioAndroid": true
         }
       ],
@@ -96,7 +96,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Hikmah Web needs the microphone for voice messages, calls and live streams."
+          "microphonePermission": "Hikmah Web needs the microphone for voice messages."
         }
       ],
       [
@@ -115,9 +115,7 @@
           "defaultChannel": "default_v2",
           "sounds": [
             "./assets/sounds/notification.wav",
-            "./assets/sounds/message.wav",
-            "./assets/sounds/ringtone.wav",
-            "./assets/sounds/live.wav"
+            "./assets/sounds/message.wav"
           ]
         }
       ],
@@ -130,15 +128,7 @@
           "isAndroidBackgroundLocationEnabled": false
         }
       ],
-      "./plugins/withFullScreenCallIntent.js",
       "./plugins/withNotifeeCoreOffline.js",
-      [
-        "@config-plugins/react-native-webrtc",
-        {
-          "cameraPermission": "Hikmah Web needs the camera so other people can see you on a video call or your live stream.",
-          "microphonePermission": "Hikmah Web needs the microphone so other people can hear you on calls and live streams."
-        }
-      ],
       [
         "expo-build-properties",
         {

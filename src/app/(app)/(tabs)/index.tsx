@@ -2,7 +2,7 @@
    Home — the ranked feed.
 
    One request paints the whole screen (`GET /feed/home`:
-   items + liveNow + an authoritative nextCursor), and three
+   items + an authoritative nextCursor), and three
    rules from FEED_API shape everything below:
 
    1. Render `items` IN THE ORDER RECEIVED. `rankScore` is
@@ -11,7 +11,7 @@
    2. `nextCursor` is authoritative and `null` means the end.
       Ranked order is not chronological, so it can never be
       derived from the last row.
-   3. liveNow, channel digests and explore injections are
+   3. Channel digests and explore injections are
       FIRST-PAGE ONLY. A cursor page with none of them is
       normal, not a degraded read.
 
@@ -35,7 +35,7 @@
    trending tags) has no column to live in on a phone, so those
    surfaces ride IN the timeline as discovery bands — which also
    means an account with a quiet follow graph still meets
-   research, Q&A and live content on day one.
+   research and Q&A content on day one.
    ========================================================= */
 import { api, errorText, isTransient } from '@/api'
 import {
@@ -49,13 +49,11 @@ import { FEED_GAP, feedPlate } from '@/components/feed/plate'
 import { takeCreatedPost, takeEditedPost } from '@/components/feed/feedInbox'
 import { usePostTombstones } from '@/components/feed/postTombstones'
 import { FeedSkeleton } from '@/components/feed/FeedSkeleton'
-import { LiveRail } from '@/components/feed/LiveRail'
 import { NewPostsPill } from '@/components/feed/NewPostsPill'
 import { warmTray } from '@/components/stories/trayStore'
-import { LiveFeedCard } from '@/components/feed/LiveFeedCard'
 import { takeWarmHomePage } from '@/components/feed/feedWarm'
 import { PymkStrip } from '@/components/feed/PymkStrip'
-import type { FeedAuthor, FeedItem, FeedRow, LiveStreamView, PostView, SuggestionView } from '@/components/feed/types'
+import type { FeedAuthor, FeedItem, FeedRow, PostView, SuggestionView } from '@/components/feed/types'
 import { useFeedTracking, useIsActiveVideo } from '@/components/feed/useFeedTracking'
 import { ComposeFab } from '@/components/nav/ComposeFab'
 import { useTabRetap } from '@/components/nav/tabEvents'
@@ -63,7 +61,7 @@ import { PostMenuSheet, type PostMenuTarget } from '@/components/post/PostMenuSh
 import { useEngagement } from '@/components/post/useEngagement'
 import { StoryRail } from '@/components/stories/StoryRail'
 import { useAuth, useAuthGate } from '@/context/AuthContext'
-import { useChatEvents, useNotificationEvents, useNotificationUnread, useReconcile } from '@/context/RealtimeContext'
+import { useNotificationEvents, useNotificationUnread, useReconcile } from '@/context/RealtimeContext'
 import { useAfterInteractions } from '@/hooks/useAfterInteractions'
 import { useEvent } from '@/hooks/useAsync'
 import { usePaged } from '@/hooks/usePaged'
@@ -84,7 +82,6 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const PAGE_SIZE = 20
-const LIVE_POLL_MS = 60_000
 /* One delayed retry for a 503, and one only: the datastore-unavailable family
    is transient by contract, and a loop turns one outage into two. */
 const TRANSIENT_RETRY_MS = 2500
@@ -100,8 +97,6 @@ type FeedTab = 'foryou' | 'latest' | 'scholars'
    trending. A short page appends whatever never reached its slot, so a
    quiet follow graph still gets the full tour. */
 const RESEARCH_SLOT = 1
-/* The mid-scroll live reminder — between the research shelf and PYMK. */
-const LIVE_CARD_SLOT = 3
 const QNA_SLOT = 6
 const TREND_SLOT = 9
 
@@ -175,7 +170,6 @@ export default function HomeScreen() {
      timeline in the other mode and back again (the web holds these apart for
      the same reason). */
   const [mode, setMode] = React.useState<Mode>('ranked')
-  const [liveNow, setLiveNow] = React.useState<LiveStreamView[]>([])
   const [suggestions, setSuggestions] = React.useState<SuggestionView[]>([])
   const [followed, setFollowed] = React.useState<Set<string>>(() => new Set())
   const [newPosts, setNewPosts] = React.useState(0)
@@ -220,7 +214,7 @@ export default function HomeScreen() {
      mount as it always did, because a home feed that is a skeleton for an
      extra quarter second is not smoother, it is slower. What waits are the
      four SECOND-TIER reads that used to land in the middle of the slide:
-     the live-rail top-up, the three discovery-band leaderboards, and PYMK.
+     the three discovery-band leaderboards and PYMK.
      Under reduced motion there is no slide and this is `true` on frame one. */
   const ready = useAfterInteractions()
 
@@ -271,14 +265,10 @@ export default function HomeScreen() {
           lastFirstPageSig.current = sig
         }
       }
-      /* The rail rows ride the feed's first page — mirrored here, in the
-         response handler, rather than via a set-state-in-effect on `extra`
-         that double-rendered the screen per page and bailed the compiler. */
-      if (!cursor && Array.isArray(res.liveNow)) setLiveNow(res.liveNow)
       return {
         items: pageItems,
         nextCursor: res.nextCursor,
-        extra: { liveNow: res.liveNow, ranked: res.ranked },
+        extra: { ranked: res.ranked },
       }
       })
     },
@@ -286,62 +276,6 @@ export default function HomeScreen() {
   )
 
   const { items, extra, loading, refreshing, loadingMore, done, error } = feed
-
-  /* ---------- the live rail ---------- */
-
-  /* The rail is REFETCHED, never folded locally. /feed/live-now is not "the
-     streams I follow": it is followed hosts first, topped up to ten with the
-     most-watched public streams, blocked hosts removed. stream.started fans
-     out only to a host's followers, so prepending the event's own row would
-     break that ordering, and removing one would leave the vacated top-up slot
-     empty. The doc's instruction is literally "refresh the rail". */
-  const pullLive = React.useCallback(() => {
-    api.posts.liveNow()
-      .then((rows: any) => {
-        const next: LiveStreamView[] = rows || []
-        /* Key-equal payloads keep the old identity — this array feeds a
-           renderItem dep, and most refreshes answer "same streams". */
-        setLiveNow(prev => (
-          prev.map(s => String(s.id)).join() === next.map(s => String(s.id)).join() ? prev : next
-        ))
-      })
-      .catch(() => {})
-  }, [])
-
-  /* The poll is now the FALLBACK, not the mechanism: it covers the top-up
-     slots, whose hosts the viewer does not follow and whose start/end
-     therefore never reaches this device. */
-  useFocusEffect(React.useCallback(() => {
-    if (!enabled) return
-    /* Held until the screen has arrived. The rail is NOT blank meanwhile: the
-       feed's own first page carries `liveNow` (extra), and this refetch is only
-       the top-up read described above — so the deferral costs nothing visible
-       and buys a request that no longer competes with the slide. Re-runs when
-       `ready` flips, which is what arms the 60s poll. */
-    if (!ready) return
-    let alive = true
-    /* Focus is not foreground: pressing home leaves this screen focused, and
-       Home is the tab most likely to be on top when the app goes away. Without
-       the AppState check the rail keeps waking the radio every 60s, on a
-       metered connection, for something nobody can see. */
-    const pull = () => { if (alive && AppState.currentState === 'active') pullLive() }
-    pull()
-    const id = setInterval(pull, LIVE_POLL_MS)
-    return () => { alive = false; clearInterval(id) }
-  }, [enabled, ready, pullLive]))
-
-  /* A followed host going live should light the rail now, not up to a minute
-     later. This rides the chat stream that RealtimeContext already holds open
-     — no new emitter, so the backend's five-per-user LRU cap is untouched.
-     Debounced because one host starting fans out several frames. */
-  const liveDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-  React.useEffect(() => () => { if (liveDebounce.current) clearTimeout(liveDebounce.current) }, [])
-  useChatEvents(evt => {
-    const type = String((evt as any)?.type || '')
-    if (type !== 'stream.started' && type !== 'stream.ended') return
-    if (liveDebounce.current) return
-    liveDebounce.current = setTimeout(() => { liveDebounce.current = null; pullLive() }, 1000)
-  }, enabled)
 
   /* ---------- discovery surfaces ---------- */
 
@@ -556,7 +490,6 @@ export default function HomeScreen() {
 
   const rows = React.useMemo<FeedRow[]>(() => {
     const out: FeedRow[] = []
-    if (liveNow.length) out.push({ kind: 'LIVE_RAIL', id: '__live' })
 
     if (tab === 'scholars') {
       /* The web's aggregation, verbatim: globally sourced scholar content +
@@ -584,14 +517,10 @@ export default function HomeScreen() {
        still shows the research desk and the open questions. */
     const bands: FeedRow[] = []
     if (researchShelf.length) bands.push({ kind: 'RESEARCH_RAIL', id: '__research' })
-    /* The live card re-surfaces liveNow[0] (followed-first by contract) for
-       the reader who scrolled past the rail. */
-    if (liveNow.length) bands.push({ kind: 'LIVE_CARD', id: '__livecard' })
     if (openQuestions.length) bands.push({ kind: 'QNA_BAND', id: '__qna' })
     if (trends.length) bands.push({ kind: 'TRENDING', id: '__trending' })
     const slotOf = (row: FeedRow) =>
       row.kind === 'RESEARCH_RAIL' ? RESEARCH_SLOT
-        : row.kind === 'LIVE_CARD' ? LIVE_CARD_SLOT
         : row.kind === 'QNA_BAND' ? QNA_SLOT
         : TREND_SLOT
     /* The shift-on-slot walk below needs ascending slots. */
@@ -610,7 +539,7 @@ export default function HomeScreen() {
     })
     out.push(...bands)
     return out
-  }, [tab, items, liveNow.length, showPymk, scholarExtra, researchShelf.length, openQuestions.length, trends.length])
+  }, [tab, items, showPymk, scholarExtra, researchShelf.length, openQuestions.length, trends.length])
 
   const headerH = insets.top + t.layout.headerHeight + SEG_ROW_H
   /* Memoized: a fresh style object per render makes FlashList re-measure its
@@ -678,10 +607,6 @@ export default function HomeScreen() {
   const onModerationCleared = useEvent((fresh: any) => {
     feed.patch(String(fresh.id), prev => ({ ...prev, ...fresh } as FeedItem))
   })
-  /* Discovery entries open the PAGER (swipe to the next stream); direct
-     links and notifications keep the classic single room. */
-  const onPressLive = useEvent((s: LiveStreamView) => router.push(`/live/watch?start=${s.id}`))
-  const onSeeAllLive = useEvent(() => router.push('/live'))
   const onFollowSuggestion = useEvent((s: SuggestionView) => { void follow(s.candidateId) })
   const onDismissSuggestion = useEvent((s: SuggestionView) => { void dismissSuggestion(s) })
   const onSeeAllSuggestions = useEvent(() => router.push('/suggestions'))
@@ -698,20 +623,6 @@ export default function HomeScreen() {
      is deliberately NOT here: each row subscribes to its own flag inside
      FeedCardRow, so a hand-off re-renders two rows, not the list. */
   const renderItem = React.useCallback(({ item }: { item: FeedRow }) => {
-    if (item.kind === 'LIVE_CARD') {
-      /* liveNow[0] is followed-first by contract; the row was only inserted
-         while the array was non-empty, and it degrades to nothing if the
-         stream ended between renders. */
-      const s = liveNow[0]
-      return s ? <LiveFeedCard stream={s} onPress={onPressLive} /> : null
-    }
-    if (item.kind === 'LIVE_RAIL') {
-      return (
-        <View style={styles.band}>
-          <LiveRail streams={liveNow} onPress={onPressLive} onSeeAll={onSeeAllLive} />
-        </View>
-      )
-    }
     if (item.kind === 'PYMK') {
       return (
         <View style={styles.band}>
@@ -793,9 +704,9 @@ export default function HomeScreen() {
     )
   }, [
     c.surface, c.separator,
-    tab, liveNow, suggestions, followed, muted, openItem,
+    tab, suggestions, followed, muted, openItem,
     researchShelf, openQuestions, trends,
-    onPressLive, onSeeAllLive, onFollowSuggestion, onDismissSuggestion,
+    onFollowSuggestion, onDismissSuggestion,
     onSeeAllSuggestions, onClosePymk, onFollow, onLike, onSave, onSaveLongPress,
     onShare, onComment, onMenu, onPressAuthor, onPressChannel, onPressTag,
     onPressMention, onToggleMute, refetchPost, onModerationCleared,
@@ -906,12 +817,9 @@ export default function HomeScreen() {
              which is what gives all three room to breathe on a phone. */
           <Wordmark size={22} color={c.text} onPress={backToTop} style={styles.wordmark} />
         }
-        /* Creating lives in the FAB, which covers all six things this app can
-           make. The header carries the bell plus the two destinations that have
-           no tab of their own — Live only surfaces in-feed while someone is
-           actually live, and Channels was otherwise buried in Explore. */
+        /* Creating lives in the FAB. The header carries the bell plus
+           Channels, which has no tab of its own. */
         actions={[
-          { icon: 'live', label: 'Live', onPress: () => router.push('/live') },
           { icon: 'channels', label: 'Channels', onPress: () => router.push('/channels') },
           { icon: 'bell', label: 'Notifications', onPress: () => router.push('/notifications'), badge: notificationUnread || null },
         ]}

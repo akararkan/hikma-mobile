@@ -13,8 +13,7 @@
        inkOn() per the on-plate luminance rule
      · the story ring: unseen is a 2pt steel ring (SealRing,
        a plain bordered View — list-safe); seen is stone;
-       live is a 2pt liveDot ring + the LIVE pill (a
-       sanctioned pill); close friends keep presence green
+       close friends keep presence green
      · the presence dot — 8pt role hue in a 2px bg ring at
        the trailing-bottom corner, mirrored under RTL
 
@@ -36,7 +35,7 @@ import { Touchable } from './Touchable'
 import { SealRing } from './ornaments'
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | number
-export type StoryRing = 'none' | 'unseen' | 'seen' | 'close' | 'live'
+export type StoryRing = 'none' | 'unseen' | 'seen' | 'close'
 export type Presence = 'online' | 'away' | 'offline' | null | undefined
 
 export interface AvatarProps {
@@ -106,15 +105,14 @@ export function Avatar({
   const showRing = ring !== 'none'
   const outer = showRing ? px + RING_SPAN * 2 : px
   /* Drawn-border rings — every state except the circular unseen seal.
-     Widths per DESIGN.md §6: seen 1.5pt, live 2pt; close friends keep
+     Widths per DESIGN.md §6: seen 1.5pt; close friends keep
      the sacred presence green; unseen falls back to a plain accent
      ring on setback tiles (the seal impression is circular). */
   const sealRing = showRing && ring === 'unseen' && !square
   const ringStroke =
     ring === 'seen' ? { width: 1.5, color: c.storyRingSeen }
-      : ring === 'live' ? { width: 2, color: c.liveDot }
-        : ring === 'close' ? { width: 2, color: c.online }
-          : { width: 2, color: c.storyRing }
+      : ring === 'close' ? { width: 2, color: c.online }
+        : { width: 2, color: c.storyRing }
   const ringSize = px + (RING_GAP + ringStroke.width) * 2
   const ringInset = (outer - ringSize) / 2
 
@@ -231,12 +229,6 @@ export function Avatar({
         </View>
       ) : null}
 
-      {ring === 'live' ? (
-        <View style={[styles.liveTag, { backgroundColor: c.liveDot, borderColor: c.bg }]}>
-          {/* Pure #FFFFFF ink is sanctioned on liveDot plates only. */}
-          <Text variant="micro" color="#FFFFFF" align="center">LIVE</Text>
-        </View>
-      ) : null}
     </View>
   )
 
@@ -331,16 +323,4 @@ const styles = StyleSheet.create({
   /* Wider than the hole and thinner, so away cannot be mistaken for offline
      at a glance. */
   presenceBar: { width: 6, height: 2, borderRadius: 1 },
-  /* One of the two sanctioned pills. `bottom: -1` compensates the live
-     ring's 4pt inset inside the shared RING_SPAN footprint, keeping the
-     pill's midline on the drawn ring. */
-  liveTag: {
-    position: 'absolute',
-    bottom: -1,
-    alignSelf: 'center',
-    paddingHorizontal: space.xs2,
-    paddingVertical: space.xxs,
-    borderRadius: shape.pill,
-    borderWidth: 2,
-  },
 })

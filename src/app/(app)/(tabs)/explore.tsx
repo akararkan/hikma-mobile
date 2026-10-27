@@ -652,12 +652,6 @@ function Browse({
         <Divider inset={56} />
         <DirRow icon="channels" label="Channels" onPress={() => router.push(href('/channels'))} />
         <Divider inset={56} />
-        {/* Live and Calls have hub screens nothing else links to — same reason
-            the two scholarly libraries are listed below. */}
-        <DirRow icon="live" label="Live" onPress={() => router.push(href('/live'))} />
-        <Divider inset={56} />
-        <DirRow icon="phone" label="Calls" onPress={() => router.push(href('/calls'))} />
-        <Divider inset={56} />
         <DirRow icon="music" label="Sounds" onPress={() => router.push(href('/sounds'))} />
         <Divider inset={56} />
         <DirRow icon="hash" label="Tags" onPress={() => router.push(href('/tags'))} />

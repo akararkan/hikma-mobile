@@ -28,11 +28,6 @@ export async function resolveMock() {
   return { hit: false }
 }
 
-/** The live-chat demo reel — nothing to replay in a release build. */
-export async function liveChatFrames() {
-  return []
-}
-
 /** The fake notification stream — hand back a no-op unsubscribe. */
 export function mockStream() {
   return () => {}

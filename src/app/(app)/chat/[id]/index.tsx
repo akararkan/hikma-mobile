@@ -51,8 +51,6 @@ import {
   useChatActions, useChatRequests, useChatSettings, useConversation,
 } from '@/context/ChatContext'
 import { useChatEvents, usePresence, useTyping, type TypingState } from '@/context/RealtimeContext'
-import { callLogForConvo, type CallLogEntry } from '@/components/call/callStore'
-import { CallSessionRow } from '@/components/chat/CallSessionRow'
 import { chatVoice } from '@/components/chat/chatVoicePlayer'
 import { chatError } from '@/lib/chatErrors'
 import { isNsfwBlocked } from '@/lib/moderation'
@@ -99,7 +97,6 @@ type Row =
   | { type: 'unread'; key: string }
   | { type: 'system'; key: string; message: any }
   | { type: 'msg'; key: string; message: any; runStart: boolean; runEnd: boolean }
-  | { type: 'call'; key: string; entry: CallLogEntry; count: number; firstTs: number }
 
 /* ---------------------------------------------------------
    The two live leaves. They hold the typing/presence store
@@ -153,9 +150,8 @@ const ThreadTypingFooter = React.memo(function ThreadTypingFooter({
    key, and tears the whole subtree down — the GestureDetector and its
    handlers, three shared values, the avatar's image, MediaGrid, ReactionChips
    — instead of swapping props on a mounted bubble. A thread has a divider
-   every calendar day plus a system note per membership change (and now a
-   call card per ended call), so on a fast scroll back through history that
-   fired constantly. */
+   every calendar day plus a system note per membership change, so on a fast
+   scroll back through history that fired constantly. */
 const keyExtractor = (item: Row) => item.key
 const getItemType = (item: Row) => item.type
 
@@ -332,72 +328,6 @@ export default function ConversationScreen() {
 
   /* ---------------- rows ---------------- */
 
-  /* ---- call sessions in the timeline ----
-     The server writes no message for a call (calls.md), so the sessions come
-     from the device-local call log, merged into the timeline by time. The log
-     is written by whichever surface watched the call end (CallBanner, the
-     call room, the incoming screen) — re-read a beat after a terminal call
-     frame lands so the writer has run, and again on focus for the round trip
-     through the call room. */
-  /* Derived-state reset (keyed on convId) rather than an effect: the effect
-     version double-rendered on every conversation switch and is the exact
-     set-state-in-effect shape the compiler bails on. */
-  const [callState, setCallState] = React.useState<{ convId: string; log: CallLogEntry[] }>(
-    () => ({ convId, log: callLogForConvo(convId) }),
-  )
-  if (callState.convId !== convId) setCallState({ convId, log: callLogForConvo(convId) })
-  const callLog = callState.log
-  const rereadCallLog = React.useCallback(
-    () => setCallState({ convId, log: callLogForConvo(convId) }),
-    [convId],
-  )
-  useChatEvents(evt => {
-    if (evt.type !== 'call.ended' && evt.type !== 'call.declined') return
-    if (evt.conversationId && String(evt.conversationId) !== convId) return
-    setTimeout(rereadCallLog, 80)
-  })
-  useFocusEffect(React.useCallback(() => { rereadCallLog() }, [rereadCallLog]))
-
-  /* Only the calls that fall INSIDE the loaded window. The merge below walks
-     the loaded messages and flushes every earlier call before the first one —
-     so with older pages still unfetched, a year of call history would stack
-     up above the oldest loaded message, all at the wrong place in the thread.
-     The floor lifts as pages load, and drops away entirely once the whole
-     history is here (or when there are no messages at all and the calls ARE
-     the conversation). */
-  const oldestLoadedTs = React.useMemo(() => {
-    if (!thread.hasMore || !thread.messages.length) return 0
-    const first = thread.messages[0]
-    const ts = first._ts ?? Date.parse(first.createdAt)
-    return Number.isFinite(ts) ? ts : 0
-  }, [thread.hasMore, thread.messages])
-
-  const callMerges = React.useMemo(() => {
-    const flat = callLog
-      .map(entry => ({ entry, ts: Date.parse(entry.endedAt || entry.startedAt || '') || 0 }))
-      .filter(x => x.ts > 0 && x.ts >= oldestLoadedTs)
-    /* Runs of the SAME outcome collapse into one card — three rapid redials
-       used to stack three identical plates. Key = direction+status+kind
-       within ten minutes; the newest entry drives the card and the
-       call-back, the first timestamp gives the range. */
-    const grouped: { entry: CallLogEntry; ts: number; count: number; firstTs: number }[] = []
-    for (const x of flat) {
-      const prev = grouped[grouped.length - 1]
-      if (prev
-        && prev.entry.direction === x.entry.direction
-        && prev.entry.status === x.entry.status
-        && prev.entry.type === x.entry.type
-        && x.ts - prev.ts < 10 * 60_000) {
-        prev.count += 1
-        prev.ts = x.ts
-        prev.entry = x.entry
-      } else {
-        grouped.push({ ...x, count: 1, firstTs: x.ts })
-      }
-    }
-    return grouped
-  }, [callLog, oldestLoadedTs])
-
   const pinnedSet = React.useMemo(
     () => new Set(thread.pinnedList.map((p: any) => String(p.id))),
     [thread.pinnedList],
@@ -419,18 +349,10 @@ export default function ConversationScreen() {
     const out: Row[] = []
     let lastDay = ''
     let unreadPlaced = false
-    let ci = 0
     const anchor = unreadAnchor.current
 
     for (let i = 0; i < thread.messages.length; i++) {
       const m = thread.messages[i]
-      /* Call sessions slot in chronologically, BEFORE this message's day
-         divider — a call from yesterday must not land under today's chip. */
-      const mts = m._ts ?? Date.parse(m.createdAt)
-      while (ci < callMerges.length && callMerges[ci].ts <= mts) {
-        out.push({ type: 'call', key: `call-${callMerges[ci].entry.callId}`, entry: callMerges[ci].entry, count: callMerges[ci].count, firstTs: callMerges[ci].firstTs })
-        ci++
-      }
       const day = m._day ?? dayKey(m.createdAt)
       if (day && day !== lastDay) {
         lastDay = day
@@ -467,13 +389,8 @@ export default function ConversationScreen() {
       })
     }
 
-    /* Calls newer than the newest message — the just-ended call's card. */
-    for (; ci < callMerges.length; ci++) {
-      out.push({ type: 'call', key: `call-${callMerges[ci].entry.callId}`, entry: callMerges[ci].entry, count: callMerges[ci].count, firstTs: callMerges[ci].firstTs })
-    }
-
     return out
-  }, [thread.messages, pinnedSet, myId, callMerges])
+  }, [thread.messages, pinnedSet, myId])
 
   /* The typing row moved OUT of the data entirely — it renders as the list
      footer, whose leaf holds the useTyping subscription. A typing frame now
@@ -1078,18 +995,11 @@ export default function ConversationScreen() {
     [convId, dir.nameOf, convoIsGroup],
   )
 
-  /* useEvent: renderRow depends on it, and the router identity must not
-     re-mint every visible row. */
-  const onCallBack = useEvent((video: boolean) => {
-    router.push(`/call/new?convId=${convId}&type=${video ? 'VIDEO' : 'VOICE'}`)
-  })
-
   const renderRow = React.useCallback(({ item }: { item: Row }) => {
     switch (item.type) {
       case 'day': return <DayDivider iso={item.iso} />
       case 'unread': return <UnreadDivider />
       case 'system': return <SystemNote message={item.message} nameOf={dir.nameOf} myId={myId} />
-      case 'call': return <CallSessionRow entry={item.entry} count={item.count} spanStartMs={item.firstTs} onCallBack={onCallBack} />
       case 'msg': {
         const m = item.message
         const mine = String(m.senderId) === String(myId)
@@ -1166,7 +1076,7 @@ export default function ConversationScreen() {
       {selectMode ? (
         /* Selection is modal, and the header says so: the count where the
            title was, one X out — the same grammar the notification inbox
-           speaks. Calls and info have no business inside a selection. */
+           speaks. Info has no business inside a selection. */
         <Header
           border={false}
           closeButton
@@ -1206,12 +1116,6 @@ export default function ConversationScreen() {
         }
         back={() => router.back()}
         actions={[
-          /* No calls in channels — a broadcast thread is not a room you can
-             ring. The same gate rides chat/[id]/info's quick actions. */
-          ...(convo?.isChannel ? [] : [
-            { icon: 'call' as const, onPress: () => router.push(`/call/new?convId=${convId}&type=VOICE`), label: 'Voice call' },
-            { icon: 'videoCall' as const, onPress: () => router.push(`/call/new?convId=${convId}&type=VIDEO`), label: 'Video call' },
-          ]),
           { icon: 'moreVertical' as const, onPress: () => router.push(`/chat/${convId}/info`), label: 'Conversation info' },
         ]}
       />

@@ -13,7 +13,6 @@ import { routes as qna } from './qna.js'
 import { routes as research } from './research.js'
 import { routes as chat } from './chat.js'
 import { routes as platform } from './platform.js'
-import { routes as live } from './live.js'
 import { routes as extra } from './extra.js'
 
 export const routes = [
@@ -31,6 +30,5 @@ export const routes = [
   ...research,
   ...chat,
   ...platform,
-  ...live,
   ...extra,
 ]

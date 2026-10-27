@@ -26,7 +26,7 @@ export interface PagedResult<T> {
   items: T[]
   nextCursor?: string | null
   hasMore?: boolean
-  /** Anything else the first page carried — liveNow, totals, facets. */
+  /** Anything else the first page carried — totals, facets. */
   extra?: any
 }
 

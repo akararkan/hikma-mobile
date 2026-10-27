@@ -99,46 +99,6 @@ export async function resolveMock(method, path, opts = {}) {
   return MISS
 }
 
-/** Live-chat rows for every stream, already in `LiveChatMessage` wire shape.
- *  Live chat is broadcast-only on the real backend — POST to send, SSE to
- *  receive, no GET, never persisted — so this is the one part of the fixture
- *  that cannot be reached through a REST route. `chat.js`'s mock stream shim
- *  replays these as `stream.chat` frames so the rail is not empty on arrival. */
-export async function liveChatFrames() {
-  const { db } = await load()
-  const byId = new Map((db.users || []).map(u => [u.id, u]))
-
-  const perStream = []
-  for (const [streamId, rows] of Object.entries(db.live?.chat || {})) {
-    if (!rows?.length) continue
-    perStream.push(rows.map((r) => {
-      const u = byId.get(r.userId)
-      return {
-        streamId,
-        userId: r.userId,
-        username: u?.username || '',
-        text: r.text,
-        sentAt: new Date(Date.now() - (r.agoMin || 0) * 60_000).toISOString(),
-      }
-    }))
-  }
-
-  /* ROUND-ROBIN across streams, not stream-by-stream. The replay is one cycle
-     over a single per-user socket, so a flat concatenation makes the last
-     stream's first line arrive only after every earlier stream has emptied —
-     ~13s of an empty rail for whichever room you happened to open. Interleaved,
-     every room sees its first line within a few seconds. */
-  const out = []
-  const depth = Math.max(0, ...perStream.map(s => s.length))
-  for (let i = 0; i < depth; i++) {
-    for (const s of perStream) if (s[i]) out.push(s[i])
-  }
-  return out
-}
-
-/** A scripted event replay for src/api/realtime.js, which opens an
- *  EventSource rather than calling request(). Returns an unsubscribe fn.
- *  Events fire slowly and stop; a demo wants a sign of life, not a firehose. */
 export function mockStream(handlers = {}) {
   let stopped = false
   const timers = []

@@ -47,7 +47,7 @@ import { http } from './http.js'
 export const MODERATION_REDACTED = '[private message — body withheld from staff by policy]'
 
 /** Entity types whose text never reaches staff (EnumSet in the controller). */
-export const REDACTED_ENTITY_TYPES = ['CHAT_MESSAGE', 'LIVE_CHAT']
+export const REDACTED_ENTITY_TYPES = ['CHAT_MESSAGE']
 
 /** True when this text is the policy placeholder rather than real content. */
 export function isRedactedText(text) {
@@ -67,12 +67,12 @@ export const MODERATION_STATUSES = ['IN_REVIEW', 'PENDING', 'APPROVED', 'REJECTE
 /** ModerationVerdict — per-FIELD outcome, not per-case status. */
 export const MODERATION_VERDICTS = ['APPROVE', 'REVIEW', 'REJECT']
 
-/** ModeratedEntityType, in enum order. Same 13 keys as ENTITY_LABEL in
+/** ModeratedEntityType, in enum order. Same keys as ENTITY_LABEL in
  *  src/lib/moderation.js — import the nouns from there, not from here. */
 export const MODERATED_ENTITY_TYPES = [
   'POST', 'POST_COMMENT', 'STORY', 'STORY_POLL', 'RESEARCH', 'RESEARCH_COMMENT',
-  'QNA_QUESTION', 'QNA_ANSWER', 'CHAT_MESSAGE', 'CHANNEL', 'STREAM_META',
-  'LIVE_CHAT', 'CONTENT_ANNOTATION',
+  'QNA_QUESTION', 'QNA_ANSWER', 'CHAT_MESSAGE', 'CHANNEL',
+  'CONTENT_ANNOTATION',
 ]
 
 /** ModerationLabel.wire() — the six classifier heads, in enum order. Score maps,
@@ -266,7 +266,7 @@ const review = {
    *   console's "not found" branch has to live in the error handler.
    * - `fields[].scores` is `{}` (not absent) when the stored blob was empty or
    *   malformed; an empty score map means "we could not read it", not "all zero".
-   * - `fields[].text` is the redaction placeholder for CHAT_MESSAGE / LIVE_CHAT.
+   * - `fields[].text` is the redaction placeholder for CHAT_MESSAGE.
    * - `thresholds.entityType` comes back LOWERCASE while `summary.entityType` is
    *   UPPERCASE, in the same payload.
    */
@@ -286,7 +286,7 @@ const review = {
    * MODERATION_CASE_DECIDED error in the code path despite the constant
    * existing (drift: api.md lists it as a live 400; zero throw sites).
    *
-   * `teachModel` is a silent no-op for CHAT_MESSAGE / LIVE_CHAT.
+   * `teachModel` is a silent no-op for CHAT_MESSAGE.
    */
   decide(caseId, { action, reason, teachModel } = {}) {
     return http.post(`/api/v1/admin/moderation/review/${caseId}/decide`, {
